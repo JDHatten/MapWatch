@@ -25,11 +25,14 @@ It is highly recommended you play Path of Exile in a **Windowed Mode** while usi
 ### Licensing:
 
 Map Watch is licensed under the GNU GENERAL PUBLIC LICENSE Version 2.  Please see the file called LICENSE for more info.
+
 sql.js uses the MIT LICENSE.
 
 
-## Contacts:
+### Contacts:
+
 Email:  Jonathan.D.Hatten@gmail.com
+
 Path of Exile IGN:  Grahf_Azura
 
 
