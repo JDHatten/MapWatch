@@ -20,7 +20,7 @@ xcopy /s/y %~dp0\images\icon.ico %~dp0\dist\images\
 :: Javascript Files
 xcopy /s/y %~dp0\js\sql.js %~dp0\dist\js\
 
-:: Template Files
+:: Statistics Files
 xcopy /s/y %~dp0\statistics\stat_file_01.html %~dp0\dist\statistics\
 
 :: Compile scripts to a Windows exe
