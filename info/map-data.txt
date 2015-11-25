@@ -1,0 +1,216 @@
+
+White:
+
+Rarity: Normal
+Precinct Map
+--------
+Map Tier: 11
+--------
+Item Level: 78
+--------
+Travel to this Map by using it in the Eternal Laboratory or a personal Map Device. Maps can only be used once.
+
+
+
+
+Magic:
+
+Rarity: Magic
+Freezing Catacomb Map of Desecration
+--------
+Map Tier: 4
+Item Quantity: +23% (augmented)
+--------
+Item Level: 71
+--------
+Area has patches of desecrated ground
+Monsters deal 82% extra Damage as Cold
+--------
+Travel to this Map by using it in the Eternal Laboratory or a personal Map Device. Maps can only be used once.
+
+
+
+
+Rare 1:
+
+Rarity: Rare
+Arid View
+Gorge Map
+--------
+Map Tier: 9
+Item Quantity: +63% (augmented)
+--------
+Item Level: 74
+--------
+Area has patches of shocking ground
+Area contains many Totems
+Players are cursed with Elemental Weakness
++75% Monster Fire Resistance
+Monsters gain 3 Frenzy Charges every 20 seconds
+--------
+Travel to this Map by using it in the Eternal Laboratory or a personal Map Device. Maps can only be used once.
+
+
+
+Rare 2:
+
+Rarity: Rare
+Destiny Spires
+Volcano Map
+--------
+Map Tier: 10
+Item Quantity: +69% (augmented)
+Item Rarity: +40% (augmented)
+Monster Pack Size: +15% (augmented)
+--------
+Item Level: 78
+--------
+Area has increased monster variety
+Area has patches of desecrated ground
+Area is inhabited by 2 additional Rogue Exiles
+Players Recover Life, Mana and Energy Shield 40% slower
++60% Monster Lightning Resistance
+--------
+Travel to this Map by using it in the Eternal Laboratory or a personal Map Device. Maps can only be used once.
+
+
+
+
+
+Unique:
+
+Rarity: Unique
+Oba's Cursed Trove
+Torture Chamber Map
+--------
+Map Tier: 7
+Item Quantity: +51% (augmented)
+Quality: +11% (augmented)
+--------
+Item Level: 75
+--------
+Area has patches of desecrated ground
+40% more Monster Life
+31% increased Monster Damage
+Area becomes fatal after some time
+--------
+"Here the soil is more deadly than any swing of the axe."
+- Oba of the Karui, Conqueror of Corruption.
+--------
+Travel to this Map by using it in the Eternal Laboratory or a personal Map Device. Maps can only be used once.
+
+
+
+
+Rarity: Unique
+Poorjoy's Asylum
+Temple Map
+--------
+Map Tier: 6
+Item Quantity: +100% (augmented)
+Item Rarity: +250% (augmented)
+--------
+Item Level: 71
+--------
+148% more Monster Life
+153% increased Monster Damage
+25% increased Monster Movement Speed
+25% increased Monster Attack Speed
+25% increased Monster Cast Speed
+Area is a large Maze
+150% increased Experience gain
+Unique Boss drops 11 additional Rare Daggers
+--------
+Laughs of all the twisted
+Echo through these halls of gold.
+In this cold forgotten void
+They wander, forever uncontrolled.
+--------
+Travel to this Map by using it in the Eternal Laboratory or a personal Map Device. Maps can only be used once.
+
+
+
+Rarity: Unique
+Maelström of Chaos
+Mountain Ledge Map
+--------
+Map Tier: 2
+Item Quantity: +46% (augmented)
+Item Rarity: +314% (augmented)
+--------
+Item Level: 68
+--------
+Area has patches of chilled ground
+Monsters deal 50% extra Damage as Lightning
+Monsters are immune to randomly chosen elemental status ailments or stun
+Monsters' Melee Attacks apply random Curses on Hit
+Monsters reflect Curses
+--------
+Whispers from a world apart
+Speak my name beyond the tomb;
+Bound within the Maelström's heart,
+Will they grant me strength or doom?
+--------
+Travel to this Map by using it in the Eternal Laboratory or a personal Map Device. Maps can only be used once.
+
+
+
+
+
+UnID:
+
+Rarity: Magic
+Jungle Valley Map
+--------
+Map Tier: 7
+--------
+Item Level: 78
+--------
+Unidentified
+--------
+Travel to this Map by using it in the Eternal Laboratory or a personal Map Device. Maps can only be used once.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
