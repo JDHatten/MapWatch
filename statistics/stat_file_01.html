@@ -95,8 +95,12 @@ function activate_tab(num) {
 }
 
 function getData(db) {
+	$("#tab1").removeClass("tabs");
+	$("#tab2").removeClass("tabs");
+	$("#tab3").removeClass("tabs");
+	$("#tab4").removeClass("tabs");
 	/**********
-	* Get number of +0 +1 +2 Map Tier drops in maps ran.  Best Map Returns!
+	* Get number of +0 +1 +2 Map Tier drops in maps ran.  Average Map Returns!
 	******/
 	var maps_dropped = db.prepare("SELECT Found_In_ID, Tier FROM Maps_Dropped WHERE Found_In_ID > 0");
 	var maps_ran = db.prepare("SELECT Time_Stamp_ID, Tier FROM Maps_Ran");
@@ -183,7 +187,7 @@ function getData(db) {
 		}
 	}
 	//console.log(map_returns);
-	bestMapReturns(map_returns);
+	avgMapReturns(map_returns);
 
 	/**********
 	* Get number of Maps dropped by Tier.  Count All Map Drops!
@@ -391,15 +395,19 @@ function getData(db) {
 }
 
 // https://google-developers.appspot.com/chart/
-function bestMapReturns(data) {
+function avgMapReturns(data) {
+	var tab2 = document.getElementById("tab2");
+	while (tab2.firstChild) {
+		tab2.removeChild(tab2.firstChild);
+	}
 	var hr = document.createElement("hr");
 	document.getElementById("tab2").appendChild(hr);
 	var chart_div = document.createElement("div");
 	chart_div.setAttribute("id", "map_returns_chart");
 	chart_div.setAttribute("class", "map-charts");
-	document.getElementById("tab2").appendChild(chart_div);
+	tab2.appendChild(chart_div);
 	hr = document.createElement("hr");
-	document.getElementById("tab2").appendChild(hr);
+	tab2.appendChild(hr);
 
 	var data = google.visualization.arrayToDataTable(data);
 	var title = 'All Maps Dropped within an IQ Range';
@@ -420,14 +428,18 @@ function bestMapReturns(data) {
 }
 
 function allMapDrops(rows) {
+	var tab1 = document.getElementById("tab1");
+	while (tab1.firstChild) {
+		tab1.removeChild(tab1.firstChild);
+	}
 	var hr = document.createElement("hr");
 	document.getElementById("tab1").appendChild(hr);
 	var chart_div = document.createElement("div");
 	chart_div.setAttribute("id", "map_drops_chart");
 	chart_div.setAttribute("class", "map-charts");
-	document.getElementById("tab1").appendChild(chart_div);
+	tab1.appendChild(chart_div);
 	hr = document.createElement("hr");
-	document.getElementById("tab1").appendChild(hr);
+	tab1.appendChild(hr);
 
 	var data = new google.visualization.DataTable();
 	data.addColumn('string', 'Map Tiers');
@@ -450,19 +462,23 @@ function allMapDrops(rows) {
 }
 
 function mapDropsByIQ(data, num) {
+	var tab3 = document.getElementById("tab3");
 	if (num == 1) {
+		while (tab3.firstChild) {
+			tab3.removeChild(tab3.firstChild);
+		}
 		var hr = document.createElement("hr");
-		document.getElementById("tab3").appendChild(hr);
+		tab3.appendChild(hr);
 	}
 	var chart_div = document.createElement("div");
 	chart_div.setAttribute("id", "map_iq_piechart"+num);
 	chart_div.setAttribute("class", "pie-charts");
-	document.getElementById("tab3").appendChild(chart_div);
+	tab3.appendChild(chart_div);
 	var title = 'All Maps Dropped within an IQ Range';
 	if (num == 2) {
 		title = 'Average Map Drops within an IQ Range';
 		hr = document.createElement("hr");
-		document.getElementById("tab3").appendChild(hr);
+		tab3.appendChild(hr);
 	}
 
 	var data = google.visualization.arrayToDataTable(data);
@@ -485,128 +501,144 @@ function getMapDropTable (map_num) {
 }
 
 function addMapDropTableData(all_maps_dropped, map_num) {
-	var dt = $('#map_drops'+map_num).DataTable( {
-		data: all_maps_dropped[+map_num],
-        columns: [
-            { title: "ID (Date-Time)" },
-            { title: "Name" },
-            { title: "Tier" },
-            { title: "IQ" },
-            { title: "IR" },
-            { title: "Pack Size" },
-            { title: "Rarity" },
-            { title: "Mods" },
-            { title: "More Mods" },
-            /*{ title: "Mod3" },
-            { title: "Mod4" },
-            { title: "Mod5" },
-            { title: "Mod6" },
-            { title: "Mod7" },
-            { title: "Mod8" },
-            { title: "Mod9" }*/
-        ],
-        columnDefs: [
-            {
-                render: function ( data, type, row ) {
-                	if (isNaN(data)) {
-                		return data;
-                	}
-                	return formatDateTime(+data)
-                },
-                targets: 0
-            }
-        ],
-        language:
-        {
-            "info": 			"Showing _START_ to _END_ of _TOTAL_ Maps Dropped",
-            "infoEmpty": 		"Showing 0 to 0 of 0 Maps",
-		    "infoFiltered": 	"(filtered from _MAX_ total Maps)",
-		    "lengthMenu": 		"Show _MENU_ Maps Dropped",
-        },
-        order: [[0, 'asc']],
-        paging: false,
-        searching: false
-    } );
+	if ( ! $.fn.DataTable.isDataTable( '#map_table'+map_num ) ) {
+		var dt = $('#map_drops'+map_num).DataTable( {
+			data: all_maps_dropped[+map_num],
+			retrieve: true,
+	        columns: [
+	            { title: "ID (Date-Time)" },
+	            { title: "Name" },
+	            { title: "Tier" },
+	            { title: "IQ" },
+	            { title: "IR" },
+	            { title: "Pack Size" },
+	            { title: "Rarity" },
+	            { title: "Mods" },
+	            { title: "More Mods" },
+	            /*{ title: "Mod3" },
+	            { title: "Mod4" },
+	            { title: "Mod5" },
+	            { title: "Mod6" },
+	            { title: "Mod7" },
+	            { title: "Mod8" },
+	            { title: "Mod9" }*/
+	        ],
+	        columnDefs: [
+	            {
+	                render: function ( data, type, row ) {
+	                	if (isNaN(data)) {
+	                		return data;
+	                	}
+	                	return formatDateTime(+data)
+	                },
+	                targets: 0
+	            }
+	        ],
+	        language:
+	        {
+	            "info": 			"Showing _START_ to _END_ of _TOTAL_ Maps Dropped",
+	            "infoEmpty": 		"Showing 0 to 0 of 0 Maps",
+			    "infoFiltered": 	"(filtered from _MAX_ total Maps)",
+			    "lengthMenu": 		"Show _MENU_ Maps Dropped",
+	        },
+	        order: [[0, 'asc']],
+	        paging: false,
+	        searching: false
+	    } );
+	}
+	else {
+		var dt = $('#map_table'+map_num).DataTable();
+		dt.destroy();
+		//addMapDropTableData(all_maps_dropped, map_num);
+	}
 }
 
 function allMapDataTable(all_maps_ran, all_maps_dropped) {
-    var dt = $('#map_table').DataTable( {
-		data: all_maps_ran,
-        columns: [
-            {
-                class:          "details-control",
-                orderable:      false,
-                //data:           null,
-                defaultContent: "",
-                searchable: 	false
-            },
-            { title: "ID (Date-Time)" },
-            { title: "Name" },
-            { title: "Tier" },
-            { title: "IQ" },
-            { title: "IR" },
-            { title: "Pack Size" },
-            { title: "Rarity" },
-            { title: "Mods" },
-            { title: "More Mods" },
-            /*{ title: "Mod3" },
-            { title: "Mod4" },
-            { title: "Mod5" },
-            { title: "Mod6" },
-            { title: "Mod7" },
-            { title: "Mod8" },
-            { title: "Mod9" }*/
-        ],
-        columnDefs: [
-            {
-                render: function ( data, type, row ) {
-                	if (isNaN(data)) {
-                		return data;
-                	}
-                	return formatDateTime(+data)
-                },
-                targets: 1
-            }
-        ],
-        language:
-        {
-            "info": 			"Showing _START_ to _END_ of _TOTAL_ Maps Ran",
-            "infoEmpty": 		"Showing 0 to 0 of 0 Maps",
-		    "infoFiltered": 	"(filtered from _MAX_ total Maps)",
-		    "lengthMenu": 		"Show _MENU_ Maps Ran",
-        },
-        order: [[1, 'asc']]
-    } );
+    if ( ! $.fn.DataTable.isDataTable( '#map_table' ) ) {
+	    var dt = $('#map_table').DataTable( {
+			data: all_maps_ran,
+			retrieve: true,
+	        columns: [
+	            {
+	                class:          "details-control",
+	                orderable:      false,
+	                //data:           null,
+	                defaultContent: "",
+	                searchable: 	false
+	            },
+	            { title: "ID (Date-Time)" },
+	            { title: "Name" },
+	            { title: "Tier" },
+	            { title: "IQ" },
+	            { title: "IR" },
+	            { title: "Pack Size" },
+	            { title: "Rarity" },
+	            { title: "Mods" },
+	            { title: "More Mods" },
+	            /*{ title: "Mod3" },
+	            { title: "Mod4" },
+	            { title: "Mod5" },
+	            { title: "Mod6" },
+	            { title: "Mod7" },
+	            { title: "Mod8" },
+	            { title: "Mod9" }*/
+	        ],
+	        columnDefs: [
+	            {
+	                render: function ( data, type, row ) {
+	                	if (isNaN(data)) {
+	                		return data;
+	                	}
+	                	return formatDateTime(+data)
+	                },
+	                targets: 1
+	            }
+	        ],
+	        language:
+	        {
+	            "info": 			"Showing _START_ to _END_ of _TOTAL_ Maps Ran",
+	            "infoEmpty": 		"Showing 0 to 0 of 0 Maps",
+			    "infoFiltered": 	"(filtered from _MAX_ total Maps)",
+			    "lengthMenu": 		"Show _MENU_ Maps Ran",
+	        },
+	        order: [[1, 'asc']]
+	    } );
 
-    // Array to track the ids of the details displayed rows
-    var detailRows = [];
-    $('#map_table tbody').on('click', 'tr td.details-control', function () {
-        var tr = $(this).closest('tr');
-        var row = dt.row(tr);
-        var idx = $.inArray( tr.attr('id'), detailRows );
-        var map_num = $(this).text();
-        tr.toggleClass('selected');
-        if ( row.child.isShown() ) {
-            tr.removeClass('details');
-            row.child.hide();
-            // Remove from the 'open' array
-            detailRows.splice(idx, 1);
-        }
-        else {
-            tr.addClass('details');
-            row.child( getMapDropTable(map_num) ).show();
-            addMapDropTableData(all_maps_dropped, map_num);
-            // Add to the 'open' array
-            if (idx === -1) 
-                detailRows.push( tr.attr('id') );
-        }
-    });
-    // On each draw, loop over the `detailRows` array and show any child rows
-    dt.on('draw', function () {
-        $.each( detailRows, function (i, id) {
-            $('#'+id+' td.details-control').trigger('click');
-        } );
-    });
+	    // Array to track the ids of the details displayed rows
+	    var detailRows = [];
+	    $('#map_table tbody').on('click', 'tr td.details-control', function () {
+	        var tr = $(this).closest('tr');
+	        var row = dt.row(tr);
+	        var idx = $.inArray( tr.attr('id'), detailRows );
+	        var map_num = $(this).text();
+	        tr.toggleClass('selected');
+	        if ( row.child.isShown() ) {
+	            tr.removeClass('details');
+	            row.child.hide();
+	            // Remove from the 'open' array
+	            detailRows.splice(idx, 1);
+	        }
+	        else {
+	            tr.addClass('details');
+	            row.child( getMapDropTable(map_num) ).show();
+	            addMapDropTableData(all_maps_dropped, map_num);
+	            // Add to the 'open' array
+	            if (idx === -1) 
+	                detailRows.push( tr.attr('id') );
+	        }
+	    });
+	    // On each draw, loop over the `detailRows` array and show any child rows
+	    dt.on('draw', function () {
+	        $.each( detailRows, function (i, id) {
+	            $('#'+id+' td.details-control').trigger('click');
+	        });
+	    });
+	}
+	else {
+		var dt = $('#map_table').DataTable();
+		dt.destroy();
+		allMapDataTable(all_maps_ran, all_maps_dropped);
+	}
 }
 
 function formatDateTime(unixTimestamp) {

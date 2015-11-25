@@ -20,6 +20,10 @@ xcopy /s/y %~dp0\images\icon.ico %~dp0\dist\images\
 :: Javascript Files
 xcopy /s/y %~dp0\js\sql.js %~dp0\dist\js\
 
+:: Readme and License
+copy %~dp0\README.md %~dp0\dist\readme.txt
+copy %~dp0\LICENSE %~dp0\dist\license.txt
+
 :: Statistics Files
 xcopy /s/y %~dp0\statistics\stat_file_01.html %~dp0\dist\statistics\
 
