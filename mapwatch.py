@@ -20,7 +20,7 @@ from preferences import Ui_Preferences
 ### Create custom icons
 ### Create more HTML statistic files
 ### am/pm time option
-### If map ran is cleared without any map drops recorded, give option to delete that map.  In-case it was added accidently.
+### 
 ###
 
 class Map():
@@ -41,6 +41,10 @@ class Map():
     Mod8 = 14
     Mod9 = 15
     ModList = 16
+
+class Maps():
+    Dropped = 0
+    Ran = 1
 
 class MapWatchWindow(QtWidgets.QMainWindow):
     
@@ -219,7 +223,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         self.ui_confirm.boxType('confirm')
         del_map = None
         if self.ui_confirm.exec_('Remove Map?', 'Are you sure you want to delete the last map saved to database?'):
-            del_map = self.mapDB.deleteMap()
+            del_map = self.mapDB.deleteLastMap(Maps.Dropped)
             self.updateWindowTitle()
         if del_map:
             self.sysTrayIcon.showMessage(
@@ -240,7 +244,6 @@ class MapWatchWindow(QtWidgets.QMainWindow):
                 1, 1000)
 
     def clearMap(self):
-        print('Map Cleared')
         self.ui_confirm.boxType('confirm')
         if self.ui_confirm.exec_('Map Cleared?', 'Is the map cleared?  No more map drops will be linked to this map.'):
             self.mapDB.clearMap()
@@ -248,8 +251,8 @@ class MapWatchWindow(QtWidgets.QMainWindow):
 
     def runMap(self):
         print('Running Selected Map')
-        self.updateUiMapRunning()
-        self.mapDB.runMap(self.map_data)
+        if self.mapDB.runMap(self.map_data):
+            self.updateUiMapRunning()
 
     def setDBFile(self, new = False):
         abs_path = os.path.abspath(os.path.dirname('__file__'))
@@ -286,7 +289,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
 
     def updateWindowTitle(self):
         map_count = self.mapDB.countMapsAdded()
-        self.setWindowTitle(self.appTitle + ' ---> ' + str(map_count) +' maps in database (' + os.path.basename(self.mapDB.db_file) + ')')
+        self.setWindowTitle(self.appTitle + ' ---> ' + str(map_count) +' map drops in database (' + os.path.basename(self.mapDB.db_file) + ')')
 
     def error(self, err_msg, errors):
         err_msg += '\n'
@@ -297,6 +300,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
 
     def closeApplication(self):
         print('Map Watch Closing')
+        self.mapDB.clearMap() # In-case user forgot to clear thier map before closing app
         self.sysTrayIcon.hide()
         sys.exit()
     
@@ -344,6 +348,11 @@ class ConfirmDialog(QtWidgets.QDialog):
             self.ui.buttonBox.setGeometry(QtCore.QRect(10, 60, 251, 23))
             self.ui.message.setGeometry(QtCore.QRect(10, 0, 251, 61))
             self.ui.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.No|QtWidgets.QDialogButtonBox.Yes)
+        if type is 'confirmXL':
+            self.setFixedSize(270, 119)
+            self.ui.buttonBox.setGeometry(QtCore.QRect(10, 90, 251, 23))
+            self.ui.message.setGeometry(QtCore.QRect(10, 0, 251, 91))
+            self.ui.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.No|QtWidgets.QDialogButtonBox.Yes)
         elif type is 'error':
             self.setFixedSize(270, 199)
             self.ui.buttonBox.setGeometry(QtCore.QRect(10, 170, 251, 23))
@@ -368,7 +377,7 @@ class Preferences(QtWidgets.QDialog):
         self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Discard).clicked.connect(self.reject)
         self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.RestoreDefaults).clicked.connect(self.restoreDefaults)
         print("Preferences Window loaded")
-    
+
     def loadData(self):
         abs_path = os.path.abspath(os.path.dirname('__file__'))
         statistics_dir = abs_path+'\\statistics\\'
@@ -549,7 +558,8 @@ class MapDatabase(object):
         self.parent = parent
         self.table_names = ['Maps_Dropped','Maps_Ran']
         self.unique_col_name = 'Time_Stamp_ID'
-        self.column_names = ['Name','Tier','IQ','IR','Pack_Size','Rarity','Mod1','Mod2','Mod3','Mod4','Mod5','Mod6','Mod7','Mod8','Mod9','Found_In_ID'] #TODO: Dropped_In_ID ?
+        self.column_names = [['Name','Tier','IQ','IR','Pack_Size','Rarity','Mod1','Mod2','Mod3','Mod4','Mod5','Mod6','Mod7','Mod8','Mod9','Dropped_In_ID'],
+                             ['Name','Tier','IQ','IR','Pack_Size','Rarity','Mod1','Mod2','Mod3','Mod4','Mod5','Mod6','Mod7','Mod8','Mod9','Time_Cleared']]
         self.map_running = None
         print('MapDatabase loaded')
 
@@ -562,7 +572,7 @@ class MapDatabase(object):
         self.openDB()
         map_count = 0
         try:
-            self.c.execute("SELECT * FROM {tn}".format(tn=self.table_names[0]))
+            self.c.execute("SELECT * FROM {tn}".format(tn=self.table_names[Maps.Dropped]))
             map_count = len(self.c.fetchall())
         except:
             self.parent.error('Error: A database table could not be found. Atziri corrupted your database file!', sys.exc_info())
@@ -583,15 +593,27 @@ class MapDatabase(object):
         map_name = None
         try:
             for field, value in map.items():
-                if int(field) == 0:
+                if int(field) == Map.TimeAdded:
                     # Note: Will throw error when adding a map that already exist (Time_Stamp) with no "INSERT OR IGNORE".  Do I want this behavior?
                     self.c.execute("INSERT INTO {tn} ({kcn}) VALUES ({val})".format(tn=self.table_names[0], kcn=self.unique_col_name, val=value))
                     map_name = map[Map.Name]
                 else:
-                    self.c.execute("UPDATE {tn} SET {cn}=({val}) WHERE {kcn}=({key})".format(tn=self.table_names[0], cn=self.column_names[int(field)-1], kcn=self.unique_col_name, val='\"'+value+'\"', key=map[0]))
+                    self.c.execute("UPDATE {tn} SET {cn}=({val}) WHERE {kcn}=({key})".format(
+                            tn=self.table_names[Maps.Dropped], 
+                            cn=self.column_names[Maps.Dropped][int(field)-1],
+                            kcn=self.unique_col_name,
+                            val='\"'+value+'\"',
+                            key=map[Map.TimeAdded]
+                        ))
             # Map found in
             if self.map_running and not unlinked:
-                self.c.execute("UPDATE {tn} SET {cn}=({val}) WHERE {kcn}=({key})".format(tn=self.table_names[0], cn=self.column_names[15], kcn=self.unique_col_name, val=self.map_running[0], key=map[0]))
+                self.c.execute("UPDATE {tn} SET {cn}=({val}) WHERE {kcn}=({key})".format(
+                        tn=self.table_names[Maps.Dropped],
+                        cn=self.column_names[Maps.Dropped][15], # Dropped_In_ID
+                        kcn=self.unique_col_name,
+                        val=self.map_running[Map.TimeAdded],
+                        key=map[Map.TimeAdded]
+                    ))
             self.conn.commit()
             print('Adding Map')
         except:
@@ -600,30 +622,90 @@ class MapDatabase(object):
         return map_name
 
     def runMap(self, map):
-        self.map_running = map
         self.openDB()
         try:
             for field, value in map.items():
-                if int(field) == 0:
-                    self.c.execute("INSERT OR IGNORE INTO {tn} ({kcn}) VALUES ({val})".format(tn=self.table_names[1], kcn=self.unique_col_name, val=value))
+                if int(field) == Map.TimeAdded:
+                    self.c.execute("INSERT INTO {tn} ({kcn}) VALUES ({val})".format(
+                            tn=self.table_names[Maps.Ran],
+                            kcn=self.unique_col_name,
+                            val=value
+                        ))
                 else:
-                    self.c.execute("UPDATE {tn} SET {cn}=({val}) WHERE {kcn}=({key})".format(tn=self.table_names[1], cn=self.column_names[int(field)-1], kcn=self.unique_col_name, val='\"'+value+'\"', key=map[0]))
+                    self.c.execute("UPDATE {tn} SET {cn}=({val}) WHERE {kcn}=({key})".format(
+                            tn=self.table_names[Maps.Ran],
+                            cn=self.column_names[Maps.Ran][int(field)-1],
+                            kcn=self.unique_col_name,
+                            val='\"'+value+'\"',
+                            key=map[Map.TimeAdded]
+                        ))
             self.conn.commit()
+            success = True
+            self.map_running = map
         except:
             self.parent.error('Error: Database record could not be created.', sys.exc_info())
+            success = False
+            #self.map_running = None
         self.closeDB()
+        return success
 
     def clearMap(self):
-        print('Map Cleared')
-        self.map_running = None
+        if self.map_running:
+            print('Map Cleared')
+            self.openDB()
+            clear_time = time.time()
+            try:
+                # Add time map cleared
+                self.c.execute("UPDATE {tn} SET {cn}=({val}) WHERE {kcn}=({key})".format(
+                        tn=self.table_names[Maps.Ran],
+                        cn=self.column_names[Maps.Ran][15], # Time_Cleared
+                        kcn=self.unique_col_name,
+                        val=clear_time,
+                        key=self.map_running[Map.TimeAdded]
+                    ))
+                self.conn.commit()
+                # Any map drops in this map?
+                self.c.execute("SELECT * FROM {tn} WHERE {kcn} = (SELECT MAX({mr_kcn}) FROM {mr_tn})".format(
+                        tn=self.table_names[Maps.Dropped],
+                        kcn=self.column_names[Maps.Dropped][15], # Dropped_In_ID
+                        mr_kcn=self.unique_col_name,
+                        mr_tn=self.table_names[Maps.Ran]
+                    ))
+                self.map_running = None
+            except:
+                self.parent.error('Error: Database record could not be updated.', sys.exc_info())
+            if not self.c.fetchone():
+                self.parent.ui_confirm.boxType('confirmXL')
+                if self.parent.ui_confirm.exec_('Delete Map?', 
+                                                'No Map Drops were found in this map.  '+
+                                                'Is this correct or did you run this map by mistake and want to delete it from the database?'):
+                    map_name = self.deleteLastMap(Maps.Ran)
+                    if map_name:
+                        self.parent.sysTrayIcon.showMessage(
+                            'Last Map Ran Removed',
+                            map_name+' was removed from the database.',
+                            1, 1000)
+                else:
+                    print('No mistake here, keep the map.')
+            else:
+                print('Map drops found don\'t ask to delete.')
+            self.closeDB()
+        else:
+            print('No Map to Clear')
 
-    def deleteMap(self):
+    def deleteLastMap(self, from_table):
         self.openDB()
         map_name = None
         try:
-            self.c.execute("SELECT * FROM {tn} WHERE {kcn} = (SELECT MAX({kcn}) FROM {tn})".format(tn=self.table_names[0], kcn=self.unique_col_name))
+            self.c.execute("SELECT * FROM {tn} WHERE {kcn} = (SELECT MAX({kcn}) FROM {tn})".format(
+                    tn=self.table_names[from_table],
+                    kcn=self.unique_col_name
+                ))
             map_name = self.c.fetchone()[Map.Name]
-            self.c.execute("DELETE FROM {tn} WHERE {kcn} = (SELECT MAX({kcn}) FROM {tn})".format(tn=self.table_names[0], kcn=self.unique_col_name))
+            self.c.execute("DELETE FROM {tn} WHERE {kcn} = (SELECT MAX({kcn}) FROM {tn})".format(
+                    tn=self.table_names[from_table],
+                    kcn=self.unique_col_name
+                ))
             self.conn.commit()
             print('Map Deleted')
         except:
@@ -637,24 +719,31 @@ class MapDatabase(object):
             os.unlink(file) # Overwrite old file
         self.setDBFile(file)
         self.openDB()
-        for tname in self.table_names:
+        for i, tname in enumerate(self.table_names):
             # Create a map table with unique Time_Stamp column
-            self.c.execute('CREATE TABLE IF NOT EXISTS {tn} ({cn} REAL PRIMARY KEY)'.format(tn=tname, cn=self.unique_col_name))
+            self.c.execute('CREATE TABLE IF NOT EXISTS {tn} ({cn} REAL PRIMARY KEY)'.format(
+                    tn=tname,
+                    cn=self.unique_col_name
+                ))
             # Get existing columns
             self.c.execute('PRAGMA table_info({tn})'.format(tn=tname))
             existing_columns = []
             for excol in self.c.fetchall():
                 existing_columns.append(excol[1])
             # Create columns if they don't already exist
-            for col in self.column_names:
+            for col in self.column_names[i]:
                 if col not in existing_columns:
                     if col in ['Tier','IQ','IR','Pack_Size']:
                         col_type = 'INTEGER'
-                    elif col == 'Found_In_ID':
+                    elif col == self.column_names[i][15]: # Dropped_In_ID / Time_Cleared
                         col_type = 'REAL'
                     else:
                         col_type = 'TEXT'
-                    self.c.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct}".format(tn=tname, cn=col, ct=col_type))
+                    self.c.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct}".format(
+                            tn=tname,
+                            cn=col,
+                            ct=col_type
+                        ))
         self.conn.commit()
         self.closeDB()
 
