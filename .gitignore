@@ -3,3 +3,4 @@ dist/
 dist_lite/
 info/
 data/*
+settings.ini
