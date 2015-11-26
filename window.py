@@ -103,6 +103,7 @@ class Ui_MainWindow(object):
         self.map_running = QtWidgets.QGroupBox(self.centralwidget)
         self.map_running.setGeometry(QtCore.QRect(0, 180, 451, 181))
         self.map_running.setContextMenuPolicy(QtCore.Qt.DefaultContextMenu)
+        self.map_running.setToolTip("")
         self.map_running.setTitle("")
         self.map_running.setFlat(True)
         self.map_running.setObjectName("map_running")
@@ -247,7 +248,6 @@ class Ui_MainWindow(object):
         self.label_11.setText(_translate("MainWindow", "Map Rarity:"))
         self.ms_time_stamp.setText(_translate("MainWindow", "00:00:00"))
         self.label_13.setText(_translate("MainWindow", "Time Map Last Added:"))
-        self.map_running.setToolTip(_translate("MainWindow", "<html><head/><body><p><br/></p></body></html>"))
         self.label_6.setText(_translate("MainWindow", "Map Curently Running:"))
         self.mr_mods.setHtml(_translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
