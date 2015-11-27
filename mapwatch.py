@@ -51,8 +51,8 @@ class MapWatchWindow(QtWidgets.QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         # General Settings
-        self.appTitle = 'Map Watch (v0.1)'
-        self.setWindowTitle(self.appTitle)
+        self.version = '0.1'
+        self.appTitle = 'Map Watch (v'+self.version+')'
         self.setWindowIcon(QtGui.QIcon(r'images\\icon.ico'))
         self.setWindowFlags(Qt.CustomizeWindowHint|Qt.WindowCloseButtonHint|Qt.WindowStaysOnTopHint|Qt.X11BypassWindowManagerHint)
         self.firstClose = 1
@@ -80,6 +80,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         # Configure UI
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.setWindowTitle(self.appTitle)
         self.ui_confirm = ConfirmDialog(self)
         self.ui_prefs = Preferences(self)
         self.setPrefs()
@@ -108,7 +109,9 @@ class MapWatchWindow(QtWidgets.QMainWindow):
                 self.mapDB.setDBFile(self.settings['LastOpenedDB'])
             else:
                 self.mapDB.setupDB(self.settings['LastOpenedDB'])
-            self.updateWindowTitle()
+        else:
+            self.buttonAccess(False)
+        self.updateWindowTitle()
 
     def restore(self, action):
         if action == self.sysTrayIcon.DoubleClick:
@@ -266,6 +269,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         if file_name[0]:
             self.mapDB.setDBFile(file_name[0])
             self.updateWindowTitle()
+            self.buttonAccess(True)
             self.settings['LastOpenedDB'] = file_name[0]
             writeSettings(self.settings)
 
@@ -283,15 +287,28 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         print("Preferences Updated")
 
     def about(self):
-        version = '0.1'
         self.ui_confirm.boxType('about')
-        self.ui_confirm.exec_('About', 'Map Watch\nVersion '+version+'\n\nCreated by\nJonathan.D.Hatten@gmail.com\nIGN: Grahf_Azura')
+        self.ui_confirm.exec_('About', 'Map Watch\nVersion '+self.version+'\n\nCreated by\nJonathan.D.Hatten@gmail.com\nIGN: Grahf_Azura')
 
     def updateWindowTitle(self):
-        map_count = self.mapDB.countMapsAdded()
-        self.setWindowTitle(self.appTitle + ' ---> ' + str(map_count) +' map drops in database (' + os.path.basename(self.mapDB.db_file) + ')')
+        if self.mapDB.db_file:
+            map_count = self.mapDB.countMapsAdded()
+            self.setWindowTitle(self.appTitle + ' ---> ' + str(map_count) +' map drops in database (' + os.path.basename(self.mapDB.db_file) + ')')
+        else:
+            self.setWindowTitle(self.appTitle + ' ---> Map Database Not Loaded')
 
-    def error(self, err_msg, errors):
+    def buttonAccess(self, disable):
+        self.ui.ms_add_map.setEnabled(disable)
+        self.ui.ms_remove_map.setEnabled(disable)
+        self.ui.mr_clear_map.setEnabled(disable)
+        self.ui.mr_run_map.setEnabled(disable)
+        self.ui.menu_ms_add_map.setEnabled(disable)
+        self.ui.menu_ms_add_unlinked_map.setEnabled(disable)
+        self.ui.menu_ms_remove_map.setEnabled(disable)
+        self.ui.menu_mr_clear_map.setEnabled(disable)
+        self.ui.menu_mr_run_map.setEnabled(disable)
+
+    def error(self, err_msg, errors={}):
         err_msg += '\n'
         for err in errors:
             err_msg += '\n'+str(err)
@@ -561,6 +578,7 @@ class MapDatabase(object):
         self.column_names = [['Name','Tier','IQ','IR','Pack_Size','Rarity','Mod1','Mod2','Mod3','Mod4','Mod5','Mod6','Mod7','Mod8','Mod9','Dropped_In_ID'],
                              ['Name','Tier','IQ','IR','Pack_Size','Rarity','Mod1','Mod2','Mod3','Mod4','Mod5','Mod6','Mod7','Mod8','Mod9','Time_Cleared']]
         self.map_running = None
+        self.db_file = None
         print('MapDatabase loaded')
 
     def setDBFile(self, file):
@@ -580,11 +598,16 @@ class MapDatabase(object):
         return map_count
 
     def openDB(self):
-        self.conn = sqlite3.connect(self.db_file)
-        self.c = self.conn.cursor()
+        if self.db_file:
+            self.conn = sqlite3.connect(self.db_file)
+            self.c = self.conn.cursor()
+        else:
+            self.parent.error('Error: No database file found. Please select a database file before adding any maps.')
+
 
     def closeDB(self):
-        self.conn.close()
+        if self.db_file:
+            self.conn.close()
 
     def addMap(self, map, unlinked = False):
         if map is None:
@@ -676,7 +699,7 @@ class MapDatabase(object):
                 self.parent.error('Error: Database record could not be updated.', sys.exc_info())
             if not self.c.fetchone():
                 self.parent.ui_confirm.boxType('confirmXL')
-                if self.parent.ui_confirm.exec_('Delete Map?', 
+                if self.parent.ui_confirm.exec_('Delete Map?',
                                                 'No Map Drops were found in this map.  '+
                                                 'Is this correct or did you run this map by mistake and want to delete it from the database?'):
                     map_name = self.deleteLastMap(Maps.Ran)
@@ -685,10 +708,6 @@ class MapDatabase(object):
                             'Last Map Ran Removed',
                             map_name+' was removed from the database.',
                             1, 1000)
-                else:
-                    print('No mistake here, keep the map.')
-            else:
-                print('Map drops found don\'t ask to delete.')
             self.closeDB()
         else:
             print('No Map to Clear')
