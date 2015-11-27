@@ -29,7 +29,7 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>POE Map Watch</string>
+   <string>Map Watch</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QGroupBox" name="map_selected">
