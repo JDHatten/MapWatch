@@ -1,5 +1,5 @@
 # MapWatch
-### A Path of Exile application that collects map drop data.
+## A Path of Exile application that collects map drop data.
 
 
 ### Description:
@@ -9,7 +9,7 @@
 ### Use:
 You can run the Python script in version 3.4 or download the full release that includes a Windows exe that any Windows PC should be able to run.  While in game the application will run in the background and it will popup once a player finds and copies a map's info to the clipboard.  To do this, simply highlight a map in your inventory and press Ctrl+C.  
 
-Once a map is selected you can choose to add it to your map drops or run it.  If you choose to run the map, all future map drops that you add will be linked to this map until you select map cleared.  Maps can also be added to the database unlinked to any map ran.  Maps can also be removed from database in the order they were added.
+Once a map is selected you can choose to add it to your map drops or run it.  If you choose to run the map, all future map drops that you add will be linked to this map until you select map cleared.  Maps can also be added unlinked to any map currently running and removed (in order added) from the database.
 
 
 ### Important Note:
