@@ -1,5 +1,5 @@
 # MapWatch
-## A Path of Exile application that collects map drop data.
+### A Path of Exile application that collects map drop data.
 
 
 ### Description:
