@@ -9,7 +9,7 @@ import pyperclip
 import configparser
 import webbrowser
 
-from PyQt5 import QtCore, QtGui, QtWidgets   # TODO: later only take those classes you use and not the whole module, i.e. from PyQt5.QtCore import QObject
+from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import pyqtSignal, Qt, QThread
 from PyQt5.QtWidgets import QFileDialog
 from window import Ui_MainWindow
@@ -47,7 +47,7 @@ class Maps():
     Ran = 1
 
 class MapWatchWindow(QtWidgets.QMainWindow):
-    
+
     def __init__(self, parent=None):
         super().__init__(parent)
         # General Settings
@@ -184,13 +184,6 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         if Map.Mod9 in map_data:
             all_mods = all_mods + map_data[Map.Mod9]
             self.ui.ms_mods.setText(all_mods)
-        # if Map.ModList in map_data:
-        #     all_mods = ''
-        #     #print(map_data[Map.ModList])
-        #     for mod in map_data[Map.ModList]:
-        #         all_mods = all_mods + mod + '\r\n'
-        #         self.ui.ms_mods.setText(all_mods)
-        #     print(self.ui.ms_mods.toPlainText())
 
     def updateUiMapRunning(self, clear = False):
         print('UI Updated')
@@ -474,7 +467,6 @@ class MapWatcher(QThread):
         map_mod8 =      re.search(r'Item\sLevel:\s\d*\r\s.*\r\s.*\r\s.*\r\s.*\r\s.*\r\s.*\r\s.*\r\s.*\r\s(.*)', copied_str)
         map_mod9 =      re.search(r'Item\sLevel:\s\d*\r\s.*\r\s.*\r\s.*\r\s.*\r\s.*\r\s.*\r\s.*\r\s.*\r\s.*\r\s(.*)', copied_str)
         map_data = {}
-        #map_mods = []
         map_data[Map.TimeAdded] = time.time()
         if map_rarity:
             print('Rarity: ' + map_rarity.group(1))
@@ -505,42 +497,31 @@ class MapWatcher(QThread):
                 map_data[Map.IQ] = '30'
                 #map_data[Map.IR] = '?'
                 #map_data[Map.PackSize] = '?'
-            #map_mods.append(mod1)
             map_data[Map.Mod1] = mod1
         if map_mod2:
             print(map_mod2.group(1))
-            #map_mods.append(map_mod2.group(1).replace('\r', ''))
             map_data[Map.Mod2] = map_mod2.group(1).replace('\r', '')
         if map_mod3:
             print(map_mod3.group(1))
-            #map_mods.append(map_mod3.group(1).replace('\r', ''))
             map_data[Map.Mod3] = map_mod3.group(1).replace('\r', '')
         if map_mod4:
             print(map_mod4.group(1))
-            #map_mods.append(map_mod4.group(1).replace('\r', ''))
             map_data[Map.Mod4] = map_mod4.group(1).replace('\r', '')
         if map_mod5:
             print(map_mod5.group(1))
-            #map_mods.append(map_mod5.group(1).replace('\r', ''))
             map_data[Map.Mod5] = map_mod5.group(1).replace('\r', '')
         if map_mod6:
             print(map_mod6.group(1))
-            #map_mods.append(map_mod6.group(1).replace('\r', ''))
             map_data[Map.Mod6] = map_mod6.group(1).replace('\r', '')
         if map_mod7:
             print(map_mod7.group(1))
-            #map_mods.append(map_mod7.group(1).replace('\r', ''))
             map_data[Map.Mod7] = map_mod7.group(1).replace('\r', '')
         if map_mod8:
             print(map_mod8.group(1))
-            #map_mods.append(map_mod8.group(1).replace('\r', ''))
             map_data[Map.Mod8] = map_mod8.group(1).replace('\r', '')
         if map_mod9:
             print(map_mod9.group(1))
-            #map_mods.append(map_mod9.group(1).replace('\r', ''))
             map_data[Map.Mod9] = map_mod9.group(1).replace('\r', '')
-        # if map_mods:
-        #     map_data[Map.ModList] = map_mods
         # Send signal to Update UI
         self.trigger.emit(map_data)
 
@@ -549,7 +530,7 @@ class MapWatcher(QThread):
         map_check_str = r'\r\s--------\r\sTravel to this Map by using it in the Eternal Laboratory or a personal Map Device\. Maps can only be used once\.'
         while not self.exiting:
             copied_data = pyperclip.paste()
-            if copied_data: #TODO: This doesn't work when no data has been copied since boot.  Need fix
+            if copied_data:
                 if re.search(map_check_str, copied_data) and not re.search(r'Map Watch Time Stamp:', copied_data): # Ignore maps already checked with Time Stamp
                     print('====Found a Map====')
                     # Add time stamp to every map found
@@ -583,7 +564,7 @@ class MapDatabase(object):
 
     def setDBFile(self, file):
         self.db_file = file
-        # TODO: get current map running? has to be saved into db
+        # TODO: get current map running? has to be saved into db with no time_cleared
         # TODO: check for tables and see if this DB file has beed setup. If not show error
 
     def countMapsAdded(self):
