@@ -27,6 +27,6 @@ sql.js uses the MIT LICENSE.
 
 
 ### Contacts:
-Email:  Jonathan.D.Hatte<at>gmail.com
+Email:  Jonathan.D.Hatten(at)gmail.com
 
 Path of Exile IGN:  Grahf_Azura
