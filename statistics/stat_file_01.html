@@ -21,7 +21,7 @@
 <script>
 /*
 
-TODO: Get this to work in all browsers (Chrome, FF done) 
+TODO: Get this to work in all browsers (Tested: Latest Chrome, FF, and IE10) 
 
 */
 
@@ -116,6 +116,39 @@ function getData(db) {
     $("#tab5").removeClass("tabs");
 	$("#tab6").removeClass("tabs");
 
+	/* TODO:
+		Amount of Map Drops
+		Map Drops Per Hour
+	x	Amount of Time Spent in Maps
+	x	Average Time Spent in a Map
+		Favorite Map Ran
+	?	Most Dropped Map
+	x	Most Dropped Map Tier
+		Most Ran Map Tier
+	x	Highest Map Tier Ran (# - Map Name?)
+	x	Highest Map IQ
+	x	Highest Map IR
+	x	Highest Map Pack Size
+    */
+    // Search 'Gen Stat'
+	all_gen_stats = [
+		['Amount of Map Drops', 0],
+		['Map Drops Per Hour', 0],
+		['Amount of Time Spent in Maps', 0],
+		['Average Time Spent in each Map', 0],
+		['Favorite Map Ran', ''],
+		['Most Dropped Map', ''],
+		['Most Dropped Map Tier', 0],
+		['Most Ran Map Tier', 0],
+		['Highest Map Tier Ran', 0],
+		['Highest Map IQ Ran', 0],
+		['Highest Map IR Ran', 0],
+		['Highest Map Pack Size Ran', 0],
+		['', 0],
+		['', 0]
+	];
+	var all_gen_stat_names = all_gen_stats.map(function (element) {return element[0];});
+
 	/**********
 	* Get number of +0 +1 +2 Map Tier drops in maps ran.  Average Map Returns!
 	******/
@@ -125,18 +158,19 @@ function getData(db) {
 	var i = 0;
 	var t = 0;
 	var same_tier = false;
-	var tier_count = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]; // used for averaging (20 tiers? cuz reasons, what's with the questions? are you a cop? you know you have to tell me if you're a cop.)
+	var tier_count = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]; // used for averaging (20 tiers? cuz reasons, what's with the questions? are you a cop? you know you have to tell me if you're a cop.)
 	while (maps_ran.step()) {
 		var map_ran = maps_ran.getAsObject()['Time_Stamp_ID'];
 		var map_tier = String(maps_ran.getAsObject()['Tier']);
 		var overall_gain = -1;
 		var a = 0;
-		var tier_index = map_returns.map((el) => el[0]).indexOf(map_tier); //TODO: doesn't work in IE10 and below, this method is used 2 more times below
+		//var tier_index = map_returns.map((el) => el[0]).indexOf(map_tier); // Note: doesn't work in IE10 and below
+		var tier_index = map_returns.map(function (element) {return element[0];}).indexOf(map_tier);
+		tier_count[+map_tier - 1] += 1;
 		// If tier already added, save index (t) then update an already added tier
 		if (tier_index > -1) {
 			if (!same_tier) t = i;
 			i = tier_index;
-			tier_count[+map_tier - 1] += 1;
 			same_tier = true;
 		} else if (i <= t) {
 			same_tier = false;
@@ -194,7 +228,8 @@ function getData(db) {
 	// Average the numbers where there are multiple same tiers ran
 	for (var i = 0; i < tier_count.length; i++) {
 		if (tier_count[i] > 1) {
-			var tier_index = map_returns.map((el) => el[0]).indexOf(String(i+1));
+			//var tier_index = map_returns.map((el) => el[0]).indexOf(String(i+1)); // Note: doesn't work in IE10 and below
+			var tier_index = map_returns.map(function (element) {return element[0];}).indexOf(String(i+1));
 			for (var n = 1; n < map_returns[tier_index].length; n++) {
 				if (map_returns[tier_index][n] > 0)
 					map_returns[tier_index][n] /= tier_count[i];
@@ -224,14 +259,14 @@ function getData(db) {
 	var i = 0;
 	while (maps_dropped.step()) {
 		var tier_drop = maps_dropped.getAsObject()['Tier'];
-		// (tier_drop-1) will be surfice but I might want to change the number to a string with extra words
-		var tier_index = all_drops.map((el) => el[0]).indexOf(String(tier_drop));
+		// Note: (tier_index=String(tier_drop-1)) will be surfice but I might want to change the number to a string with extra words
+		//var tier_index = all_drops.map((el) => el[0]).indexOf(String(tier_drop)); // Note: doesn't work in IE10 and below
+		var tier_index = all_drops.map(function (element) {return element[0];}).indexOf(String(tier_drop));
 		if (tier_index > -1) {
 			all_drops[tier_index][1] += 1;
 		}
 	}
 	allMapDrops(all_drops);
-
 
 	/**********
 	* Get all map data to be placed into a table.  Raw Map Data!
@@ -277,7 +312,7 @@ function getData(db) {
 	while (maps_dropped.step()) {
 		var map = maps_dropped.getAsObject();
 		// This loops until it finds the corect map ran for this map drop, because some maps ran might not have any map drops at all
-		while (map['Dropped_In_ID'] != all_maps_ran[n][1]) { 
+		while (map['Dropped_In_ID'] != all_maps_ran[n][1]) {
 			n++;
 			m = 0;
 		}
@@ -305,7 +340,7 @@ function getData(db) {
 		});
 		m++;
 	}
-	n++;
+	n = all_maps_ran.length - 1; // Last map index is a place holder for Unlinked Map Drops, start there.
 	m = 0;
 	all_maps_dropped.push([])
 	while (maps_dropped_unlinked.step()) {
@@ -378,24 +413,24 @@ function getData(db) {
 	mapDropsByIQ(map_drops_by_iq, 1);
 	while (maps_ran.step()) {
 		iq = +maps_ran.getAsObject()['IQ'];
-		if(iq < 30) {
-			if (maps_ran_by_iq[0]++ > 1)
+		if (iq < 30) {
+			if (++maps_ran_by_iq[0] > 1)
 				map_drops_by_iq[1][0] = 'IQ Range: 0-29% \n-Averaged over '+maps_ran_by_iq[0]+' maps';
 		}
 		else if (iq >= 30 && iq < 60) {
-			if (maps_ran_by_iq[1]++ > 1)
+			if (++maps_ran_by_iq[1] > 1)
 				map_drops_by_iq[2][0] = 'IQ Range: 30-59% \n-Averaged over '+maps_ran_by_iq[1]+' maps';
 		}
 		else if (iq >= 60 && iq < 90) {
-			if (maps_ran_by_iq[2]++ > 1)
+			if (++maps_ran_by_iq[2] > 1)
 				map_drops_by_iq[3][0] = 'IQ Range: 60%-89% \n-Averaged over '+maps_ran_by_iq[2]+' maps';
 		}
 		else if (iq >= 90 && iq < 120) {
-			if (maps_ran_by_iq[3]++ > 1)
+			if (++maps_ran_by_iq[3] > 1)
 				map_drops_by_iq[4][0] = 'IQ Range: 90%-119% \n-Averaged over '+maps_ran_by_iq[3]+' maps';
 		}
 		else if (iq >= 120) {
-			if (maps_ran_by_iq[4]++ > 1)
+			if (++maps_ran_by_iq[4] > 1)
 				map_drops_by_iq[5][0] = 'IQ Range: 120%+ \n-Averaged over '+maps_ran_by_iq[4]+' maps';
 		}
 	}
@@ -405,6 +440,10 @@ function getData(db) {
 	console.log(map_drops_by_iq);
 	mapDropsByIQ(map_drops_by_iq, 2);
 	
+	// Gen Stat
+	var i_avgtm = all_gen_stat_names.indexOf('Average Time Spent in each Map');
+	var i_amotm = all_gen_stat_names.indexOf('Amount of Time Spent in Maps');
+
     /**********
     * Get time between maps ran and average the time within tiers. Average Clear Speeds!
     ******/
@@ -417,12 +456,16 @@ function getData(db) {
         var end = maps_ran.getAsObject()['Time_Cleared'];
         clear_speeds[tier][0] += end - start;
         clear_speeds[tier][1] += 1;
+        // Gen Stat
+        all_gen_stats[i_avgtm][1] += 1;
+        all_gen_stats[i_amotm][1] += clear_speeds[tier][0];
     }
     for (var i = 1; i < clear_speeds.length; i++) {
         if (clear_speeds[i][1]) {
             time = formatChartTime(clear_speeds[i][0] / clear_speeds[i][1]);
+            var count = '';
             if (clear_speeds[i][1] > 1) {
-                var count = ' ('+clear_speeds[i][1]+')';
+                var count = ' ('+String(clear_speeds[i][1])+')';
             }
             var color = 'grey'
             if (i > 6) {
@@ -436,6 +479,76 @@ function getData(db) {
     }
     console.log(avg_clear_speeds);
     avgClearTimes(avg_clear_speeds);
+
+    // Gen Stat
+    all_gen_stats[i_avgtm][1] = formatTime(all_gen_stats[i_amotm][1] / all_gen_stats[i_avgtm][1], true);
+
+	/**********
+    * General Map Statistics.  Some may be found in other (above) loops.  Search 'Gen Stat'
+    ******/
+    // TODO: what about ties?
+	var maps_dropped = db.prepare("SELECT * FROM Maps_Dropped");
+	var maps_ran = db.prepare("SELECT * FROM Maps_Ran");
+	var i_amd = all_gen_stat_names.indexOf('Amount of Map Drops');
+	var i_mdh = all_gen_stat_names.indexOf('Map Drops Per Hour');
+	var i_mdm = all_gen_stat_names.indexOf('Most Dropped Map');
+	var i_mdt = all_gen_stat_names.indexOf('Most Dropped Map Tier');
+	var i_mrt = all_gen_stat_names.indexOf('Most Ran Map Tier');
+	var i_hmtier = all_gen_stat_names.indexOf('Highest Map Tier Ran');
+	var i_hmiq = all_gen_stat_names.indexOf('Highest Map IQ Ran');
+	var i_hmir = all_gen_stat_names.indexOf('Highest Map IR Ran');
+	var i_hmps = all_gen_stat_names.indexOf('Highest Map Pack Size Ran');
+	var most_dropped = [];
+	var most_dropped_tier = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+	var all_maps_linked = 0;
+	while (maps_dropped.step()) {
+		var name = maps_dropped.getAsObject()['Name'];
+		var tier = maps_dropped.getAsObject()['Tier'];
+		var drop_ID = maps_dropped.getAsObject()['Dropped_In_ID'];
+		var name_found = most_dropped.map(function (element) { return element[0]; }).indexOf(name);
+		if (name_found > -1) {
+			most_dropped[name_found][1] += 1;
+		}
+		else {
+			most_dropped.push([name, 1]);
+		}
+		most_dropped_tier[tier-1] += 1;
+		if (drop_ID > 0) {
+			all_maps_linked += 1;
+		}
+	}
+
+	var all_maps_unlinked = most_dropped_tier.reduce(function(a, b) { return a + b; });
+	all_gen_stats[i_amd][1] = all_maps_unlinked + ' (' + all_maps_linked + ' linked)';
+
+	var most_dropped = most_dropped.reduce(function(max, arr) { return max[1] >= arr[1] ? max : arr; });
+
+	all_gen_stats[i_mdh][1] = Math.round( all_maps_linked / timeToHoursDecimal(all_gen_stats[i_amotm][1]) * 100) / 100;
+
+	// TODO: Going to need to compare (in loop) names of magic/rare maps to a full list of maps to get base names of maps.
+	// Right now this doen't take into acount all base maps ran because of the name changes when rolled.
+	//all_gen_stats[i_mdm][1] = most_dropped[1] + ' ' + most_dropped[0];
+	
+	var itier = most_dropped_tier.indexOf(Math.max.apply(Math, most_dropped_tier));
+	all_gen_stats[i_mdt][1] = (itier+1) + ' (with ' + most_dropped_tier[itier] + ' drops)'
+
+	var most_ran_tier = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+	while (maps_ran.step()) {
+		var tier = maps_ran.getAsObject()['Tier'];
+		var iq = maps_ran.getAsObject()['IQ'];
+		var ir = maps_ran.getAsObject()['IR'];
+		var ps = maps_ran.getAsObject()['Pack_Size'];
+		most_ran_tier[tier-1] += 1;
+		all_gen_stats[i_hmtier][1] = (tier > all_gen_stats[i_hmtier][1]) ? tier : all_gen_stats[i_hmtier][1];
+		all_gen_stats[i_hmiq][1] = (iq > all_gen_stats[i_hmiq][1]) ? iq : all_gen_stats[i_hmiq][1];
+		all_gen_stats[i_hmir][1] = (ir > all_gen_stats[i_hmir][1]) ? ir : all_gen_stats[i_hmir][1];
+		all_gen_stats[i_hmps][1] = (ps > all_gen_stats[i_hmps][1]) ? ps : all_gen_stats[i_hmps][1];
+	}
+	var itier = most_ran_tier.indexOf(Math.max.apply(Math, most_ran_tier));
+	all_gen_stats[i_mrt][1] = (itier+1) + ' (with ' + most_ran_tier[itier] + ' ran)'
+	all_gen_stats[i_amotm][1] = formatTime(all_gen_stats[i_amotm][1]);
+    
+    gerealStatTable(all_gen_stats);
 
 	$("#tab1").addClass("tabs");
 	$("#tab2").addClass("tabs");
@@ -563,14 +676,52 @@ function avgClearTimes(data) {
     var options = {
         title: 'Average Clear Times per Map Tier',
         legend: { position: 'none' },
-        //hAxis: { title: 'Hello' },
         vAxis: { title: 'Map Tiers (Amount Ran)' },
-        chartArea: { width: '80%' },
+        chartArea: { width: '80%', height: '90%' },
         bar: { groupWidth: "90%" }
     };
     var chart = new google.visualization.BarChart(document.getElementById('clear_times_chart'));
     chart.draw(data, options);
-  }
+}
+
+function gerealStatTable(all_gen_stats) {
+    var tab5 = document.getElementById("tab5");
+	while (tab5.firstChild) {
+		tab5.removeChild(tab5.firstChild);
+	}
+	var table = document.createElement("table");
+	table.setAttribute("id", "gen_stats");
+	table.setAttribute("class", "table table-striped table-bordered");
+	tab5.appendChild(table);
+
+    if ( ! $.fn.DataTable.isDataTable('#gen_stats') ) {
+	    var dt = $('#gen_stats').DataTable( {
+			data: all_gen_stats,
+			retrieve: true,
+	        columns: [
+	            { title: "Statistic (some have yet to be calculated)" },
+	            { title: "Data" }
+	        ],
+	        language:
+	        {
+	            "info": 			"Showing _START_ to _END_ of _TOTAL_ Stats",
+	            "infoEmpty": 		"Showing 0 to 0 of 0 Stats",
+			    "infoFiltered": 	"(filtered from _MAX_ total Stats)",
+			    "lengthMenu": 		"Show _MENU_ Stats",
+	        },
+	        order: []
+	    } );
+	    $('#gen_stats tbody').on('click', 'tr', function () {
+	        $('#gen_stats tbody>tr.selected').removeClass('selected');
+	        $(this).toggleClass('selected');
+	    });
+	}
+	else {
+		var dt = $('#gen_stats').DataTable();
+		dt.destroy();
+		gerealStatTable(all_gen_stats);
+	}
+}
 
 function getMapDropTable (map_num) {
     return 	'<h4>Maps Dropped:</h4>'+
@@ -579,7 +730,7 @@ function getMapDropTable (map_num) {
 }
 
 function addMapDropTableData(all_maps_dropped, map_num) {
-	if ( ! $.fn.DataTable.isDataTable( '#map_table'+map_num ) ) {
+	if ( ! $.fn.DataTable.isDataTable('#map_table'+map_num) ) {
 		var dt = $('#map_drops'+map_num).DataTable( {
 			data: all_maps_dropped[+map_num],
 			retrieve: true,
@@ -592,14 +743,7 @@ function addMapDropTableData(all_maps_dropped, map_num) {
 	            { title: "Pack Size" },
 	            { title: "Rarity" },
 	            { title: "Mods" },
-	            { title: "More Mods" },
-	            /*{ title: "Mod3" },
-	            { title: "Mod4" },
-	            { title: "Mod5" },
-	            { title: "Mod6" },
-	            { title: "Mod7" },
-	            { title: "Mod8" },
-	            { title: "Mod9" }*/
+	            { title: "More Mods" }
 	        ],
 	        columnDefs: [
 	            {
@@ -610,6 +754,15 @@ function addMapDropTableData(all_maps_dropped, map_num) {
 	                	return formatDateTime(+data)
 	                },
 	                targets: 0
+	            },
+	            {
+	                render: function ( data, type, row ) {
+	                	if (isNaN(data)) {
+	                		return data;
+	                	}
+	                	return +data + '%'
+	                },
+	                targets: [3, 4, 5]
 	            }
 	        ],
 	        language:
@@ -632,7 +785,7 @@ function addMapDropTableData(all_maps_dropped, map_num) {
 }
 
 function allMapDataTable(all_maps_ran, all_maps_dropped) {
-    if ( ! $.fn.DataTable.isDataTable( '#map_table' ) ) {
+    if ( ! $.fn.DataTable.isDataTable('#map_table' )) {
 	    var dt = $('#map_table').DataTable( {
 			data: all_maps_ran,
 			retrieve: true,
@@ -652,14 +805,7 @@ function allMapDataTable(all_maps_ran, all_maps_dropped) {
 	            { title: "Pack Size" },
 	            { title: "Rarity" },
 	            { title: "Mods" },
-	            { title: "More Mods" },
-	            /*{ title: "Mod3" },
-	            { title: "Mod4" },
-	            { title: "Mod5" },
-	            { title: "Mod6" },
-	            { title: "Mod7" },
-	            { title: "Mod8" },
-	            { title: "Mod9" }*/
+	            { title: "More Mods" }
 	        ],
 	        columnDefs: [
 	            {
@@ -670,6 +816,15 @@ function allMapDataTable(all_maps_ran, all_maps_dropped) {
 	                	return formatDateTime(+data)
 	                },
 	                targets: 1
+	            },
+	            {
+	                render: function ( data, type, row ) {
+	                	if (isNaN(data)) {
+	                		return data;
+	                	}
+	                	return +data + '%'
+	                },
+	                targets: [4, 5, 6]
 	            }
 	        ],
 	        language:
@@ -681,7 +836,6 @@ function allMapDataTable(all_maps_ran, all_maps_dropped) {
 	        },
 	        order: [[1, 'asc']]
 	    } );
-
 	    // Array to track the ids of the details displayed rows
 	    var detailRows = [];
 	    $('#map_table tbody').on('click', 'tr td.details-control', function () {
@@ -744,6 +898,42 @@ function formatChartTime(unixTimestamp) {
     var milliseconds = dt.getMilliseconds();
     return [hours, minutes, seconds, milliseconds];
 }
+function formatTime(unixTimestamp, short) {
+    var dt = new Date(unixTimestamp * 1000);
+	var days = Math.floor((unixTimestamp) / (1000*60*60*24));
+    var hours = dt.getUTCHours();
+    var minutes = dt.getMinutes();
+    var seconds = dt.getSeconds();
+    var milliseconds = dt.getMilliseconds();
+    var day_str = 'Days';
+    var hour_str = 'Hours';
+    var min_str = 'Minutes';
+    var sec_str = 'Seconds';
+    if (days == 1)
+    	day_str = 'Day';
+    if (hours == 1)
+    	hour_str = 'Hour';
+    if (minutes == 1)
+    	min_str = 'Minute';
+    if (seconds == 1)
+    	sec_str = 'Second';
+    /*if (hours < 10)
+		hours = '0' + hours;
+	if (minutes < 10)
+		minutes = '0' + minutes;
+	if (seconds < 10)
+		seconds = '0' + seconds;*/
+	if (short) {
+		return minutes+' '+min_str+', '+seconds+'.'+milliseconds+' '+sec_str;;
+	}
+    else {
+    	return days+' '+day_str+', '+hours+' '+hour_str+', '+minutes+' '+min_str+', '+seconds+'.'+milliseconds+' '+sec_str;
+    }
+}
+function timeToHoursDecimal(unixTimestamp) {
+	var hours = unixTimestamp / (1000*60*60);
+    return hours;
+}
 
 function allMapDropsTooltip(tier, drops) { //bugged
   return '<div class="tooltip">' +
@@ -752,6 +942,7 @@ function allMapDropsTooltip(tier, drops) { //bugged
       '<span class="ttAmount">'+drops+'</span><br>' +
       '</div>';
 }
+
 </script>
 
 <style type="text/css">
@@ -797,8 +988,6 @@ body {
 	height: 0;
 }
 .body {
-	border-left: 2px #6f5c31 solid;
-	border-right: 2px #6f5c31 solid;
 	margin: auto 27px;
 	width: 957px;
 }
@@ -866,12 +1055,20 @@ body {
 }
 .body .tabs {
 	background-color: #fff;
+	border-left: 2px #6f5c31 solid;
+	border-right: 2px #6f5c31 solid;
 	display: none;
 }
 .wide-container .tabs {
 	display: none;
 }
+.body .table_tabs, .wide-container .table_tabs {
+	background: none;
+	border: none;
+	margin-top: 5px;
+}
 .body .tab-active, .wide-container .tab-active {
+	color: #000;
 	display: block;
 }
 .spacer {
@@ -985,21 +1182,21 @@ footer p {
 						<a id="tab_link3" class="tab-link">Map Drops by IQ</a>
 						<div class="spacer"></div>
                         <a id="tab_link4" class="tab-link">Avg Clear Times</a>
-                        <a id="tab_link5" class="tab-link">5</a>
+                        <a id="tab_link5" class="tab-link">General Stats</a>
 						<a id="tab_link6" class="tab-link">All Map Data</a>
 					</div>
 				</div>
 			</header>
 			<div class='body'>
-				<div id="tab1"></div>
-				<div id="tab2"></div>
-				<div id="tab3"></div>
-                <div id="tab4"></div>
-                <div id="tab5"></div>
+				<div id="tab1" class="tabs"></div>
+				<div id="tab2" class="tabs"></div>
+				<div id="tab3" class="tabs"></div>
+                <div id="tab4" class="tabs"></div>
+                <div id="tab5" class="tabs table_tabs"></div>
 			</div>
 		</div>
 		<div class="wide-container">
-			<div id="tab6">
+			<div id="tab6" class="tabs table_tabs">
 				<!-- <h2>All Map Data:</h2>
 				<h4>- All maps ran with each map dropped within it.</h4> -->
 				<table id="map_table" class="table table-striped table-bordered" cellspacing="0" width="100%"></table>
