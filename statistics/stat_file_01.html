@@ -117,14 +117,14 @@ function getData(db) {
 	$("#tab6").removeClass("tabs");
 
 	/* TODO:
-		Amount of Map Drops
-		Map Drops Per Hour
+	x	Amount of Map Drops
+	x	Map Drops Per Hour
 	x	Amount of Time Spent in Maps
 	x	Average Time Spent in a Map
 		Favorite Map Ran
-	?	Most Dropped Map
+		Most Dropped Map
 	x	Most Dropped Map Tier
-		Most Ran Map Tier
+	x	Most Ran Map Tier
 	x	Highest Map Tier Ran (# - Map Name?)
 	x	Highest Map IQ
 	x	Highest Map IR
@@ -290,14 +290,14 @@ function getData(db) {
 			}
 			else if (['Mod2','Mod3','Mod4'].indexOf(key) > -1) {
 				if (val)
-					all_maps_ran[i][8] += '<br>'+val;
+					all_maps_ran[i][9] += '<br>'+val;
 			}
 			else if (key == 'Mod5') {
 				all_maps_ran[i].push(val);
 			}
 			else if (['Mod6','Mod7','Mod8','Mod9'].indexOf(key) > -1) {
 				if (val)
-					all_maps_ran[i][9] += '<br>'+val;
+					all_maps_ran[i][10] += '<br>'+val;
 			}
 			else {
 				all_maps_ran[i].push(val);
@@ -305,8 +305,9 @@ function getData(db) {
 		});
 		i++;
 	}
-	all_maps_ran.push([i,"Unlinked Map Drops","","","","","","","",""]);
-	//console.log(all_maps_ran);
+	all_maps_ran.push([i,"Unlinked Map Drops","","","","","","","","","",""]);
+	console.log(all_maps_ran);
+	console.log('^^^');
 	var n = 0;
 	var m = 0;
 	while (maps_dropped.step()) {
@@ -385,13 +386,13 @@ function getData(db) {
 	];
 	var maps_ran_by_iq = [0,0,0,0,0];
 	var maps_dropped = db.prepare("SELECT Dropped_In_ID FROM Maps_Dropped WHERE Dropped_In_ID > 0");
-	var maps_ran = db.prepare("SELECT Time_Stamp_ID, IQ FROM Maps_Ran");
+	var maps_ran = db.prepare("SELECT Time_Stamp_ID, IQ, Bonus_IQ FROM Maps_Ran");
 	while (maps_dropped.step()) {
 		var md_id = maps_dropped.getAsObject()['Dropped_In_ID'];
-		var iq;
+		var iq = 0;
 		while (maps_ran.step()) {
 			if (md_id == maps_ran.getAsObject()['Time_Stamp_ID']) {
-				iq = +maps_ran.getAsObject()['IQ'];
+				iq = +maps_ran.getAsObject()['IQ'] + maps_ran.getAsObject()['Bonus_IQ'];
 				if(iq < 30) {
 					map_drops_by_iq[1][1]++;
 				}
@@ -412,7 +413,7 @@ function getData(db) {
 	}
 	mapDropsByIQ(map_drops_by_iq, 1);
 	while (maps_ran.step()) {
-		iq = +maps_ran.getAsObject()['IQ'];
+		iq = +maps_ran.getAsObject()['IQ'] + maps_ran.getAsObject()['Bonus_IQ'];
 		if (iq < 30) {
 			if (++maps_ran_by_iq[0] > 1)
 				map_drops_by_iq[1][0] = 'IQ Range: 0-29% \n-Averaged over '+maps_ran_by_iq[0]+' maps';
@@ -535,7 +536,7 @@ function getData(db) {
 	var most_ran_tier = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
 	while (maps_ran.step()) {
 		var tier = maps_ran.getAsObject()['Tier'];
-		var iq = maps_ran.getAsObject()['IQ'];
+		var iq = maps_ran.getAsObject()['IQ'] + maps_ran.getAsObject()['Bonus_IQ'];
 		var ir = maps_ran.getAsObject()['IR'];
 		var ps = maps_ran.getAsObject()['Pack_Size'];
 		most_ran_tier[tier-1] += 1;
@@ -735,7 +736,7 @@ function addMapDropTableData(all_maps_dropped, map_num) {
 			data: all_maps_dropped[+map_num],
 			retrieve: true,
 	        columns: [
-	            { title: "ID (Date-Time)" },
+	            { title: "Date and Time Found" },
 	            { title: "Name" },
 	            { title: "Tier" },
 	            { title: "IQ" },
@@ -747,7 +748,7 @@ function addMapDropTableData(all_maps_dropped, map_num) {
 	        ],
 	        columnDefs: [
 	            {
-	                render: function ( data, type, row ) {
+	                render: function (data, type, row) {
 	                	if (isNaN(data)) {
 	                		return data;
 	                	}
@@ -756,7 +757,7 @@ function addMapDropTableData(all_maps_dropped, map_num) {
 	                targets: 0
 	            },
 	            {
-	                render: function ( data, type, row ) {
+	                render: function (data, type, row) {
 	                	if (isNaN(data)) {
 	                		return data;
 	                	}
@@ -797,34 +798,55 @@ function allMapDataTable(all_maps_ran, all_maps_dropped) {
 	                defaultContent: "",
 	                searchable: 	false
 	            },
-	            { title: "ID (Date-Time)" },
+	            { title: "Start / End / Clear Time" },
 	            { title: "Name" },
 	            { title: "Tier" },
 	            { title: "IQ" },
+	            { title: "Bonus IQ" },
 	            { title: "IR" },
 	            { title: "Pack Size" },
 	            { title: "Rarity" },
 	            { title: "Mods" },
-	            { title: "More Mods" }
+	            { title: "More Mods" },
+	            { title: "Time Cleared" }
 	        ],
 	        columnDefs: [
 	            {
-	                render: function ( data, type, row ) {
+	                render: function (data, type, row) {
 	                	if (isNaN(data)) {
 	                		return data;
 	                	}
-	                	return formatDateTime(+data)
+	                	start = formatDateTime(+data);
+	                	if (isNaN(+row[11])) {
+	                		return start;
+	                	}
+	                	end = formatDateTime(+row[11]);
+	                	clear_time = formatTime(row[11] - data, true);
+	                	return start + '<br>' + end + '<br>' + clear_time;
 	                },
 	                targets: 1
 	            },
 	            {
-	                render: function ( data, type, row ) {
+	                render: function (data, type, row) {
+	                	if (isNaN(data)) {
+	                		return data;
+	                	}
+	                	return (+data + row[5]) + '%'; // problem here with index
+	                },
+	                targets: 4
+	            },
+	            {
+	                render: function (data, type, row) {
 	                	if (isNaN(data)) {
 	                		return data;
 	                	}
 	                	return +data + '%'
 	                },
-	                targets: [4, 5, 6]
+	                targets: [6, 7]
+	            },
+	            {
+	                targets: [5, 11], // Don't show Bonus_IQ or Time_Cleared columns
+	                visible: false
 	            }
 	        ],
 	        language:
