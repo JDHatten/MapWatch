@@ -19,8 +19,8 @@ from preferences import Ui_Preferences
 # TODOS: 
 ### Create custom icons
 ### Create more HTML statistic files
-### am/pm time option
-### 
+### am/pm time option (low priority)
+### Sacrifice Fragments
 ###
 
 class Map():
@@ -28,34 +28,71 @@ class Map():
     Name = 1
     Tier = 2
     IQ = 3
-    IR = 4
-    PackSize = 5
-    Rarity = 6
-    Mod1 = 7
-    Mod2 = 8
-    Mod3 = 9
-    Mod4 = 10
-    Mod5 = 11
-    Mod6 = 12
-    Mod7 = 13
-    Mod8 = 14
-    Mod9 = 15
-    ModList = 16
+    BonusIQ = 4
+    IR = 5
+    PackSize = 6
+    Rarity = 7
+    Mod1 = 8
+    Mod2 = 9
+    Mod3 = 10
+    Mod4 = 11
+    Mod5 = 12
+    Mod6 = 13
+    Mod7 = 14
+    Mod8 = 15
+    Mod9 = 16 # Zana Mod
 
 class Maps():
     Dropped = 0
     Ran = 1
+
+class ZanaMod():
+    Name = 0
+    Cost = 1
+    Level = 2
+    IQ = 3
+    Desc = 4
 
 class MapWatchWindow(QtWidgets.QMainWindow):
 
     def __init__(self, parent=None):
         super().__init__(parent)
         # General Settings
-        self.version = '0.1'
+        self.version = '0.2'
         self.appTitle = 'Map Watch (v'+self.version+')'
         self.setWindowIcon(QtGui.QIcon(r'images\\icon.ico'))
         self.setWindowFlags(Qt.CustomizeWindowHint|Qt.WindowCloseButtonHint|Qt.WindowStaysOnTopHint|Qt.X11BypassWindowManagerHint)
         self.firstClose = 1
+        self.zana_mods = [ # TODO: maybe load from outside source? settings.ini?
+            ['None', 'Free', 0, 0, ''],
+            ['Item Quantity', 'Free', 1, 0, '+1% Quantity Per Master Level'],
+            ['Rampage', '4x Chaos Orbs', 2, 0, 'Slaying enemies quickly grants Rampage bonuses'],
+            ['Bloodlines', '4x Chaos Orb', 2, 15, 'Magic Monster Packs each have a Bloodline Mod'],
+            ['Anarchy', '8x Chaos Orb', 3, 16, 'Area is inhabited by 4 additional Rogue Exiles'],
+            ['Invasion', '8x Chaos Orb', 3, 16, 'Area is inhabited by 3 additional Invasion Bosses'],
+            ['Domination', '10x Chaos Orb', 4, 0, 'Area Contains 5 Extra Shrines'],
+            ['Onslaught', '8x Chaos Orb', 4, 30, '40% Increased Monster Cast & Attack Speed'],
+            ['Torment', '8x Chaos Orb', 5, 12, 'Area spawns 3 extra Tormented Spirits (Stacks with any that naturally spawned)'],
+            ['Beyond', '12x Chaos Orb', 5, 8, 'Slaying enemies close together can attract monsters from Beyond this realm'],
+            ['Ambush', '12x Chaos Orb', 6, 0, 'Area contains 4 extra Strongboxes'],
+            ['Nemesis', '1x Exalted Orb', 7, 0, 'One Rare Per Pack, Rare Monsters Each Have A Nemesis Mod'],
+            ['Tempest', '3x Exalted Orb', 8, 16, 'Powerful Tempests can affect both Monsters and You'],
+            ['Warbands', '3x Exalted Orb', 8, 16, 'Area is inhabited by 2 additional Warbands']
+        ]
+        # I don't know how to include some of these within the current map tier system, 0,-1,-2 ?  
+        # How would they compare in stats? Not sure about this anymore.
+        # self.fragments = [ 
+        #     {Map.TimeAdded: 0, Map.Name: 'Sacrifice at Dusk', Map.Tier: 66, Map.Rarity: 'Unique'},
+        #     ['Sacrifice at Dawn', 67],
+        #     ['Sacrifice at Noon', 68],
+        #     ['Sacrifice at Midnight', 69],
+        #     ['The Apex of Sacrifice', 70, 0, 0, 0, 0, 'Unique', '', '']
+        #     ['Mortal Grief', 70],
+        #     ['Mortal Rage', 71],
+        #     ['Mortal Ignorance', 72],
+        #     ['Mortal Hope', 73],
+        #     {Map.TimeAdded: 0, Map.Name: 'The Alluring Abyss', Map.Tier: 13, 200, 0, 0, 0, 'Unique', '100% Monsters Damage', '100% Monsters Life'}
+        # ]
         self.settings = readSettings()
         # System Tray Icon
         self.sysTrayIcon = QtWidgets.QSystemTrayIcon()
@@ -80,6 +117,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         # Configure UI
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.setFixedSize(471, 413)
         self.setWindowTitle(self.appTitle)
         self.ui_confirm = ConfirmDialog(self)
         self.ui_prefs = Preferences(self)
@@ -89,6 +127,8 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         self.ui.ms_remove_map.clicked.connect(self.removeMap)
         self.ui.mr_clear_map.clicked.connect(self.clearMap)
         self.ui.mr_run_map.clicked.connect(self.runMap)
+        self.ui.mr_add_zana_mod.currentIndexChanged.connect(self.changeZanaMod)
+        self.ui.mr_add_bonus_iq.valueChanged.connect(self.changeBonusIQ)
         # Menu Actions
         self.ui.menu_create_new_db.triggered.connect(lambda: self.setDBFile(True))
         self.ui.menu_load_db.triggered.connect(self.setDBFile)
@@ -107,11 +147,13 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         if int(self.settings['LoadLastOpenedDB']):
             if os.path.exists(self.settings['LastOpenedDB']):
                 self.mapDB.setDBFile(self.settings['LastOpenedDB'])
+                self.mapDB.setupDB('Checking DB Structure', True)
             else:
                 self.mapDB.setupDB(self.settings['LastOpenedDB'])
         else:
             self.buttonAccess(False)
         self.updateWindowTitle()
+        self.addZanaMods()
 
     def restore(self, action):
         if action == self.sysTrayIcon.DoubleClick:
@@ -158,31 +200,31 @@ class MapWatchWindow(QtWidgets.QMainWindow):
             else:
                 self.ui.ms_name.setStyleSheet("color: rgb(0, 0, 0);")
         if Map.Mod1 in map_data:
-            all_mods = map_data[Map.Mod1] + '\r\n'
+            all_mods = map_data[Map.Mod1]
             self.ui.ms_mods.setText(all_mods)
         if Map.Mod2 in map_data:
-            all_mods = all_mods + map_data[Map.Mod2] + '\r\n'
+            all_mods = all_mods  + '\r\n' + map_data[Map.Mod2]
             self.ui.ms_mods.setText(all_mods)
         if Map.Mod3 in map_data:
-            all_mods = all_mods + map_data[Map.Mod3] + '\r\n'
+            all_mods = all_mods + '\r\n' + map_data[Map.Mod3]
             self.ui.ms_mods.setText(all_mods)
         if Map.Mod4 in map_data:
-            all_mods = all_mods + map_data[Map.Mod4] + '\r\n'
+            all_mods = all_mods + '\r\n' + map_data[Map.Mod4]
             self.ui.ms_mods.setText(all_mods)
         if Map.Mod5 in map_data:
-            all_mods = all_mods + map_data[Map.Mod5] + '\r\n'
+            all_mods = all_mods + '\r\n' + map_data[Map.Mod5]
             self.ui.ms_mods.setText(all_mods)
         if Map.Mod6 in map_data:
-            all_mods = all_mods + map_data[Map.Mod6] + '\r\n'
+            all_mods = all_mods + '\r\n' + map_data[Map.Mod6]
             self.ui.ms_mods.setText(all_mods)
         if Map.Mod7 in map_data:
-            all_mods = all_mods + map_data[Map.Mod7] + '\r\n'
+            all_mods = all_mods + '\r\n' + map_data[Map.Mod7]
             self.ui.ms_mods.setText(all_mods)
         if Map.Mod8 in map_data:
-            all_mods = all_mods + map_data[Map.Mod8] + '\r\n'
+            all_mods = all_mods + '\r\n' + map_data[Map.Mod8]
             self.ui.ms_mods.setText(all_mods)
         if Map.Mod9 in map_data:
-            all_mods = all_mods + map_data[Map.Mod9]
+            all_mods = all_mods + '\r\n' + map_data[Map.Mod9]
             self.ui.ms_mods.setText(all_mods)
 
     def updateUiMapRunning(self, clear = False):
@@ -191,6 +233,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
             self.ui.mr_name.setText('None')
             self.ui.mr_tier.setText('0')
             self.ui.mr_iq.setText('0%')
+            self.ui.mr_bonus_iq.setText('')
             self.ui.mr_ir.setText('0%')
             self.ui.mr_pack_size.setText('0%')
             self.ui.mr_rarity.setText('')
@@ -204,6 +247,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
             self.ui.mr_pack_size.setText(self.ui.ms_pack_size.text())
             self.ui.mr_rarity.setText(self.ui.ms_rarity.text())
             self.ui.mr_mods.setText(self.ui.ms_mods.toPlainText())
+            self.map_mod_text = self.ui.ms_mods.toHtml() # orginal copy for bonus IQ add/remove 
             rarity = self.ui.ms_rarity.text()
             if rarity == 'Rare':
                 self.ui.mr_name.setStyleSheet("color: rgb(170, 170, 0);")
@@ -213,6 +257,19 @@ class MapWatchWindow(QtWidgets.QMainWindow):
                 self.ui.mr_name.setStyleSheet("color: rgb(170, 85, 0);")
             else:
                 self.ui.mr_name.setStyleSheet("color: rgb(0, 0, 0);")
+
+    def updateUiMapRunningBonuses(self):
+        print('UI Updated')
+        if Map.BonusIQ in self.mapDB.map_running and self.mapDB.map_running[Map.BonusIQ] != 0:
+            self.ui.mr_bonus_iq.setText('+'+str(self.mapDB.map_running[Map.BonusIQ])+'%')
+        else:
+            self.ui.mr_bonus_iq.setText('')
+        if Map.Mod9 in self.mapDB.map_running:
+            if self.mapDB.map_running[Map.Mod9] and self.map_mod_text:
+                all_mods = self.map_mod_text + '\r\n<br><b>' +self.mapDB.map_running[Map.Mod9]+ '</b>'
+                self.ui.mr_mods.setText(all_mods)
+            else:
+                self.ui.mr_mods.setText(self.map_mod_text)
 
     def removeMap(self):
         print('Removing Last Map')
@@ -249,6 +306,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         print('Running Selected Map')
         if self.mapDB.runMap(self.map_data):
             self.updateUiMapRunning()
+            self.resetBonuses()
 
     def setDBFile(self, new = False):
         abs_path = os.path.abspath(os.path.dirname('__file__'))
@@ -261,10 +319,52 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         # Update settings
         if file_name[0]:
             self.mapDB.setDBFile(file_name[0])
+            if not new:
+                self.mapDB.setupDB('Checking DB Structure', True)
             self.updateWindowTitle()
             self.buttonAccess(True)
             self.settings['LastOpenedDB'] = file_name[0]
             writeSettings(self.settings)
+
+    def addZanaMods(self):
+        print('Adding Zana Mods to Combo Box')
+        self.ui.mr_add_zana_mod.clear()
+        for i, zana_mod in enumerate(self.zana_mods):
+            self.ui.mr_add_zana_mod.addItem(zana_mod[ZanaMod.Name] + ' (' + zana_mod[ZanaMod.Cost] + ')')
+            if int(self.settings['ZanaDefaultModIndex']) == i:
+                self.ui.mr_add_zana_mod.setCurrentIndex(i)
+            if int(self.settings['ZanaLevel']) < zana_mod[ZanaMod.Level]:
+                break # Stop adding mod options if Zana level is to low to run them
+
+    def changeZanaLevel(self):
+        self.zana_mods[1][ZanaMod.IQ] = int(self.settings['ZanaLevel'])
+        #self.zana_mods[1][ZanaMod.Desc] = '+' + self.settings['ZanaLevel'] + self.zana_mods[1][ZanaMod.Desc][2:]
+        self.addZanaMods()
+
+    def changeZanaMod(self):
+        print('New Zana Mod Selected')
+        if self.mapDB.map_running:
+            self.mapDB.map_running[Map.BonusIQ] = self.calcBonusIQ()
+            zana_mod_str = self.zana_mods[self.ui.mr_add_zana_mod.currentIndex()][ZanaMod.Desc]
+            self.mapDB.map_running[Map.Mod9] = zana_mod_str
+            self.updateUiMapRunningBonuses()
+            self.ui.mr_mods.moveCursor(QtGui.QTextCursor.End)
+
+    def changeBonusIQ(self):
+        print('Bonus IQ Changed')
+        if self.mapDB.map_running:
+            self.mapDB.map_running[Map.BonusIQ] = self.calcBonusIQ()
+            self.updateUiMapRunningBonuses()
+
+    def calcBonusIQ(self):
+        zana_iq = self.zana_mods[self.ui.mr_add_zana_mod.currentIndex()][ZanaMod.IQ]
+        bonus_iq = self.ui.mr_add_bonus_iq.property('value') + zana_iq
+        return bonus_iq
+
+    def resetBonuses(self):
+        self.ui.mr_add_zana_mod.setCurrentIndex(-1) # force change event
+        self.ui.mr_add_zana_mod.setCurrentIndex(int(self.settings['ZanaDefaultModIndex']))
+        self.ui.mr_add_bonus_iq.setProperty('value', 0)
 
     def openStatFile(self):
         stat_file = self.settings['SelectedStatisticsFile']
@@ -277,6 +377,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
     def setPrefs(self):
         self.settings = readSettings()
         self.thread.setMapCheckInterval(int(self.settings['MapCheckInterval']))
+        self.changeZanaLevel()
         print("Preferences Updated")
 
     def about(self):
@@ -316,15 +417,15 @@ class MapWatchWindow(QtWidgets.QMainWindow):
     
     def closeEvent(self, event):
         # Changes the close button (X) behavior to minimize instead
-        event.ignore()
-        if self.firstClose:
-            self.sysTrayIcon.showMessage(
-                'Minimized To System Tray',
-                'Map Watch will still continue to run in the background.  Right click and select exit to shut down application.',
-                1, 1000)
-            self.firstClose = 0
-        self.minimizeToSysTray()
-        #self.closeApplication()
+        # event.ignore()
+        # if self.firstClose:
+        #     self.sysTrayIcon.showMessage(
+        #         'Minimized To System Tray',
+        #         'Map Watch will still continue to run in the background.  Right click and select exit to shut down application.',
+        #         1, 1000)
+        #     self.firstClose = 0
+        # self.minimizeToSysTray()
+        self.closeApplication()
 
     def minimizeToSysTray(self):
         self.showMinimized()
@@ -359,9 +460,9 @@ class ConfirmDialog(QtWidgets.QDialog):
             self.ui.message.setGeometry(QtCore.QRect(10, 0, 251, 61))
             self.ui.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.No|QtWidgets.QDialogButtonBox.Yes)
         if type is 'confirmXL':
-            self.setFixedSize(270, 119)
-            self.ui.buttonBox.setGeometry(QtCore.QRect(10, 90, 251, 23))
-            self.ui.message.setGeometry(QtCore.QRect(10, 0, 251, 91))
+            self.setFixedSize(270, 149)
+            self.ui.buttonBox.setGeometry(QtCore.QRect(10, 120, 251, 23))
+            self.ui.message.setGeometry(QtCore.QRect(10, 0, 251, 121))
             self.ui.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.No|QtWidgets.QDialogButtonBox.Yes)
         elif type is 'error':
             self.setFixedSize(270, 199)
@@ -381,11 +482,11 @@ class Preferences(QtWidgets.QDialog):
         self.parent = parent
         self.ui = Ui_Preferences()
         self.ui.setupUi(self)
-        self.setFixedSize(400, 225)
+        self.setFixedSize(400, 282)
         self.loadData()
-        self.ui.buttonBox.accepted.connect(self.accept)
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Discard).clicked.connect(self.reject)
-        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.RestoreDefaults).clicked.connect(self.restoreDefaults)
+        self.ui.pref_buttons.accepted.connect(self.accept)
+        self.ui.pref_buttons.button(QtWidgets.QDialogButtonBox.Discard).clicked.connect(self.reject)
+        self.ui.pref_buttons.button(QtWidgets.QDialogButtonBox.RestoreDefaults).clicked.connect(self.restoreDefaults)
         print("Preferences Window loaded")
 
     def loadData(self):
@@ -399,28 +500,36 @@ class Preferences(QtWidgets.QDialog):
                 self.statistics_files.append(statistics_dir+file_name)
 
     def insertPrefs(self):
-        self.ui.pref_interval.setProperty('value', int(self.parent.settings['MapCheckInterval']))
+        self.ui.pref_map_check.setProperty('value', int(self.parent.settings['MapCheckInterval']))
         self.ui.pref_startup.setChecked(int(self.parent.settings['LoadLastOpenedDB']))
         self.ui.pref_db_path.setText((self.parent.settings['LastOpenedDB']))
         self.ui.pref_statistics.clear()
-        i = 0
-        for stat_file in self.statistics_files:
+        for i, stat_file in enumerate(self.statistics_files):
             self.ui.pref_statistics.addItem(os.path.basename(stat_file))
             if stat_file == self.parent.settings['SelectedStatisticsFile']:
                 self.ui.pref_statistics.setCurrentIndex(i)
-            i += 1
+        self.ui.pref_zana_level.setProperty('valse', int(self.parent.settings['ZanaLevel']))
+        self.ui.pref_defualt_zana_mod.clear()
+        for i, zana_mod in enumerate(self.parent.zana_mods):
+            self.ui.pref_defualt_zana_mod.addItem(zana_mod[ZanaMod.Name] + ' (' + zana_mod[ZanaMod.Cost] + ')')
+            if int(self.parent.settings['ZanaDefaultModIndex']) == i:
+                self.ui.pref_defualt_zana_mod.setCurrentIndex(i)
+            # if self.ui.pref_zana_level.property('value') < zana_mod[ZanaMod.Level]:
+            #     break
 
     def restoreDefaults(self):
         self.parent.ui_confirm.boxType('confirm')
         if self.parent.ui_confirm.exec_('Restore Defaults?', 'Are you sure you want to restore the default settings?'):
             writeSettings({})
             self.parent.settings = readSettings()
-            self.insertPrefs(parent.settings)
+            self.insertPrefs()
 
     def accept(self):
-        self.parent.settings['MapCheckInterval'] = str(self.ui.pref_interval.property('value'))
+        self.parent.settings['MapCheckInterval'] = str(self.ui.pref_map_check.property('value'))
         self.parent.settings['LoadLastOpenedDB'] = str(self.ui.pref_startup.checkState())
         self.parent.settings['SelectedStatisticsFile'] = self.statistics_files[self.ui.pref_statistics.currentIndex()]
+        self.parent.settings['ZanaLevel'] = str(self.ui.pref_zana_level.property('value'))
+        self.parent.settings['ZanaDefaultModIndex'] = str(self.ui.pref_defualt_zana_mod.currentIndex())
         writeSettings(self.parent.settings)
         super().accept()
 
@@ -437,6 +546,7 @@ class MapWatcher(QThread):
         QThread.__init__(self, parent)
         self.exiting = False
         self.check_interval = 3
+        self.newline = r'\r\n'
 
     def __del__(self):
         self.exiting = True
@@ -449,23 +559,18 @@ class MapWatcher(QThread):
         self.check_interval = seconds;
 
     def parseMapData(self, copied_str):
-        # Windows specific RE used here (\r)
-        map_rarity =    re.search(r'Rarity:\s(\w*)\r\s', copied_str) 
-        map_name1 =     re.search(r'Rarity:\s\w*\r\s(.*)\r\s', copied_str)
-        map_name2 =     re.search(r'Rarity:\s\w*\r\s.*\r\s(.*[^\-])\r\s', copied_str)
-        map_tier =      re.search(r'Map\sTier:\s(\d*)\r\s', copied_str)
-        map_iq =        re.search(r'Item\sQuantity:\s\+(\d*)\%.*\r\s', copied_str)
-        map_ir =        re.search(r'Item\sRarity:\s\+(\d*)\%.*\r\s', copied_str)
-        map_pack_size = re.search(r'Monster\sPack\sSize:\s\+(\d*)\%.*\r\s', copied_str)
-        map_mod1 =      re.search(r'Item\sLevel:\s\d*\r\s.*\r\s(.*)', copied_str)
-        map_mod2 =      re.search(r'Item\sLevel:\s\d*\r\s.*\r\s.*\r\s(.*)', copied_str)
-        map_mod3 =      re.search(r'Item\sLevel:\s\d*\r\s.*\r\s.*\r\s.*\r\s(.*)', copied_str)
-        map_mod4 =      re.search(r'Item\sLevel:\s\d*\r\s.*\r\s.*\r\s.*\r\s.*\r\s(.*)', copied_str)
-        map_mod5 =      re.search(r'Item\sLevel:\s\d*\r\s.*\r\s.*\r\s.*\r\s.*\r\s.*\r\s(.*)', copied_str)
-        map_mod6 =      re.search(r'Item\sLevel:\s\d*\r\s.*\r\s.*\r\s.*\r\s.*\r\s.*\r\s.*\r\s(.*)', copied_str)
-        map_mod7 =      re.search(r'Item\sLevel:\s\d*\r\s.*\r\s.*\r\s.*\r\s.*\r\s.*\r\s.*\r\s.*\r\s(.*)', copied_str)
-        map_mod8 =      re.search(r'Item\sLevel:\s\d*\r\s.*\r\s.*\r\s.*\r\s.*\r\s.*\r\s.*\r\s.*\r\s.*\r\s(.*)', copied_str)
-        map_mod9 =      re.search(r'Item\sLevel:\s\d*\r\s.*\r\s.*\r\s.*\r\s.*\r\s.*\r\s.*\r\s.*\r\s.*\r\s.*\r\s(.*)', copied_str)
+        map_rarity =    re.search(r'Rarity:\s(\w*)\n', copied_str)
+        map_name1 =     re.search(r'Rarity:\s\w*\n(.*)\n', copied_str)
+        map_name2 =     re.search(r'Rarity:\s\w*\n.*\n([^-].*)\n', copied_str)
+        map_tier =      re.search(r'Map\sTier:\s(\d*)\s', copied_str)
+        map_iq =        re.search(r'Item\sQuantity:\s\+(\d*)\%.*\n', copied_str)
+        map_ir =        re.search(r'Item\sRarity:\s\+(\d*)\%.*\n', copied_str)
+        map_pack_size = re.search(r'Monster\sPack\sSize:\s\+(\d*)\%.*\n', copied_str)
+        map_mods = []
+        pattern = re.compile(r'Item\sLevel:\s\d*\n--------\n(.*)', re.DOTALL)
+        remaining_data = re.search(pattern, copied_str)
+        if remaining_data:
+            map_mods = remaining_data.group(1).split('\n')
         map_data = {}
         map_data[Map.TimeAdded] = time.time()
         if map_rarity:
@@ -489,45 +594,18 @@ class MapWatcher(QThread):
         if map_pack_size:
             print('Monster Pack Size: ' + map_pack_size.group(1))
             map_data[Map.PackSize] = map_pack_size.group(1)
-        if map_mod1:
-            print('Map Mods: \r\n' + map_mod1.group(1))
+        for i, mod in enumerate(map_mods):
+            print('Map Mod ' + str(i+1) +': ' + mod)
+            map_data[Map.Mod1 + i] = mod
             # Unidentified maps add 30% bonus IQ
-            mod1 = map_mod1.group(1).replace('\r', '')
-            if mod1 == 'Unidentified':
+            if mod == 'Unidentified':
                 map_data[Map.IQ] = '30'
-                #map_data[Map.IR] = '?'
-                #map_data[Map.PackSize] = '?'
-            map_data[Map.Mod1] = mod1
-        if map_mod2:
-            print(map_mod2.group(1))
-            map_data[Map.Mod2] = map_mod2.group(1).replace('\r', '')
-        if map_mod3:
-            print(map_mod3.group(1))
-            map_data[Map.Mod3] = map_mod3.group(1).replace('\r', '')
-        if map_mod4:
-            print(map_mod4.group(1))
-            map_data[Map.Mod4] = map_mod4.group(1).replace('\r', '')
-        if map_mod5:
-            print(map_mod5.group(1))
-            map_data[Map.Mod5] = map_mod5.group(1).replace('\r', '')
-        if map_mod6:
-            print(map_mod6.group(1))
-            map_data[Map.Mod6] = map_mod6.group(1).replace('\r', '')
-        if map_mod7:
-            print(map_mod7.group(1))
-            map_data[Map.Mod7] = map_mod7.group(1).replace('\r', '')
-        if map_mod8:
-            print(map_mod8.group(1))
-            map_data[Map.Mod8] = map_mod8.group(1).replace('\r', '')
-        if map_mod9:
-            print(map_mod9.group(1))
-            map_data[Map.Mod9] = map_mod9.group(1).replace('\r', '')
         # Send signal to Update UI
         self.trigger.emit(map_data)
 
     # Note: This is never called directly. It is called by Qt once the thread environment has been set up.
     def run(self):
-        map_check_str = r'\r\s--------\r\sTravel to this Map by using it in the Eternal Laboratory or a personal Map Device\. Maps can only be used once\.'
+        map_check_str = r'\r?\n--------\r?\nTravel to this Map by using it in the Eternal Laboratory or a personal Map Device\. Maps can only be used once\.'
         while not self.exiting:
             copied_data = pyperclip.paste()
             if copied_data:
@@ -536,17 +614,19 @@ class MapWatcher(QThread):
                     # Add time stamp to every map found
                     time_stamp = '========\r\nMap Watch Time Stamp: ' + str(time.time()) + '\r\n========\r\n'
                     pyperclip.copy(time_stamp + copied_data)
-                    # Remove quote on a unique map (if there) and all other info below
-                    pattern = re.compile(r'.*--------.*--------.*--------.*(\r\n--------.*--------.*)', re.DOTALL)
+                    # Remove all Windows specific carriage returns (\r)
+                    copied_data = copied_data.replace('\r', '')
+                    # Remove quote on a unique map (if there) and all other unneeded data below
+                    pattern = re.compile(r'.*--------.*--------.*--------.*(\n--------.*--------.*)', re.DOTALL)
                     extra_text = re.search(pattern, copied_data)
                     if (extra_text):
                         copied_data = copied_data.replace(extra_text.group(1), '')
                     else:
                         copied_data = re.sub(map_check_str, '', copied_data)
                     # Trim all new lines at end, just in case
-                    while copied_data[-2:] == '\r\n':
-                        print('Trimming \\r\\n')
-                        copied_data = copied_data[:-2]
+                    while copied_data[-1:] == '\n':
+                        print('Trimming \\n')
+                        copied_data = copied_data[:-1]
                     self.parseMapData(copied_data)
             time.sleep(self.check_interval)
 
@@ -557,7 +637,7 @@ class MapDatabase(object):
         self.table_names = ['Maps_Dropped','Maps_Ran']
         self.unique_col_name = 'Time_Stamp_ID'
         self.column_names = [['Name','Tier','IQ','IR','Pack_Size','Rarity','Mod1','Mod2','Mod3','Mod4','Mod5','Mod6','Mod7','Mod8','Mod9','Dropped_In_ID'],
-                             ['Name','Tier','IQ','IR','Pack_Size','Rarity','Mod1','Mod2','Mod3','Mod4','Mod5','Mod6','Mod7','Mod8','Mod9','Time_Cleared']]
+                            ['Name','Tier','IQ','Bonus_IQ','IR','Pack_Size','Rarity','Mod1','Mod2','Mod3','Mod4','Mod5','Mod6','Mod7','Mod8','Mod9','Time_Cleared']]
         self.map_running = None
         self.db_file = None
         print('MapDatabase loaded')
@@ -565,7 +645,7 @@ class MapDatabase(object):
     def setDBFile(self, file):
         self.db_file = file
         # TODO: get current map running? has to be saved into db with no time_cleared
-        # TODO: check for tables and see if this DB file has beed setup. If not show error
+        # TODO: check for tables and see if this DB file has beed setup. If not show error (I don't think I need this anymore with new structure check)
 
     def countMapsAdded(self):
         self.openDB()
@@ -584,7 +664,6 @@ class MapDatabase(object):
             self.c = self.conn.cursor()
         else:
             self.parent.error('Error: No database file found. Please select a database file before adding any maps.')
-
 
     def closeDB(self):
         if self.db_file:
@@ -626,6 +705,7 @@ class MapDatabase(object):
         return map_name
 
     def runMap(self, map):
+        self.clearMap()
         self.openDB()
         try:
             for field, value in map.items():
@@ -653,8 +733,29 @@ class MapDatabase(object):
         self.closeDB()
         return success
 
+    def updateMapRunning(self):
+        if self.map_running:
+            print('updateMapRunning')
+            self.openDB()
+            try:
+                #for i, col in {Map.BonusIQ: 'Bonus_IQ', Map.Mod9: 'Mod9'}:
+                for i, col in enumerate(self.column_names[Maps.Ran]): # looks like shit, but it works in loop
+                    if i in [Map.BonusIQ-1, Map.Mod9-1]:
+                        self.c.execute("UPDATE {tn} SET {cn}=({val}) WHERE {kcn}=({key})".format(
+                                tn=self.table_names[Maps.Ran],
+                                cn=col,
+                                kcn=self.unique_col_name,
+                                val='\"'+str(self.map_running[i+1])+'\"',
+                                key=self.map_running[Map.TimeAdded]
+                            ))
+                self.conn.commit()
+            except:
+                self.parent.error('Error: Database record could not be updated.', sys.exc_info())
+            self.closeDB()
+
     def clearMap(self):
         if self.map_running:
+            self.updateMapRunning()
             print('Map Cleared')
             self.openDB()
             clear_time = time.time()
@@ -662,7 +763,7 @@ class MapDatabase(object):
                 # Add time map cleared
                 self.c.execute("UPDATE {tn} SET {cn}=({val}) WHERE {kcn}=({key})".format(
                         tn=self.table_names[Maps.Ran],
-                        cn=self.column_names[Maps.Ran][15], # Time_Cleared
+                        cn=self.column_names[Maps.Ran][16], # Time_Cleared
                         kcn=self.unique_col_name,
                         val=clear_time,
                         key=self.map_running[Map.TimeAdded]
@@ -680,9 +781,10 @@ class MapDatabase(object):
                 self.parent.error('Error: Database record could not be updated.', sys.exc_info())
             if not self.c.fetchone():
                 self.parent.ui_confirm.boxType('confirmXL')
-                if self.parent.ui_confirm.exec_('Delete Map?',
+                if self.parent.ui_confirm.exec_('Delete Current Map Running?',
                                                 'No Map Drops were found in this map.  '+
-                                                'Is this correct or did you run this map by mistake and want to delete it from the database?'):
+                                                'Is this correct or did you run this map by mistake and want to delete it from the database?  '+
+                                                '\nSelect "No" if you want to record this map with no map drops.'):
                     map_name = self.deleteLastMap(Maps.Ran)
                     if map_name:
                         self.parent.sysTrayIcon.showMessage(
@@ -713,11 +815,14 @@ class MapDatabase(object):
         self.closeDB()
         return map_name
 
-    def setupDB(self, file):
-        print('Setting up new map database.')
-        if os.path.exists(file):
-            os.unlink(file) # Overwrite old file
-        self.setDBFile(file)
+    def setupDB(self, file, db_struct_check = False):
+        if not db_struct_check:
+            print('Setting up new map database.')
+            if os.path.exists(file):
+                os.unlink(file) # Overwrite old file
+            self.setDBFile(file)
+        else:
+            print('Checking database structure.')
         self.openDB()
         for i, tname in enumerate(self.table_names):
             # Create a map table with unique Time_Stamp column
@@ -733,9 +838,9 @@ class MapDatabase(object):
             # Create columns if they don't already exist
             for col in self.column_names[i]:
                 if col not in existing_columns:
-                    if col in ['Tier','IQ','IR','Pack_Size']:
+                    if col in ['Tier','IQ','Bonus_IQ','IR','Pack_Size']:
                         col_type = 'INTEGER'
-                    elif col == self.column_names[i][15]: # Dropped_In_ID / Time_Cleared
+                    elif col in ['Dropped_In_ID','Time_Cleared']:
                         col_type = 'REAL'
                     else:
                         col_type = 'TEXT'
@@ -756,7 +861,9 @@ def writeSettings(settings):
                         'Language': 'English',
                         'LastOpenedDB': abs_path+'\\data\\mw_db001.sqlite',
                         'LoadLastOpenedDB': '2',
-                        'SelectedStatisticsFile': abs_path+'\\statistics\\stat_file_01.html'
+                        'SelectedStatisticsFile': abs_path+'\\statistics\\stat_file_01.html',
+                        'ZanaLevel': '8',
+                        'ZanaDefaultModIndex': '1'
                         }
     config['DEFAULT'] = default_settings
     if not settings:
