@@ -1,6 +1,7 @@
 import sys
 import os
 import re
+import copy
 import msvcrt
 import sqlite3
 import time
@@ -16,7 +17,7 @@ from window import Ui_MainWindow
 from confirm import Ui_Confirm
 from preferences import Ui_Preferences
 
-# TODOS: 
+# TODOS:
 ### Create custom icons
 ### Create more HTML statistic files
 ### am/pm time option (low priority)
@@ -80,8 +81,8 @@ class MapWatchWindow(QtWidgets.QMainWindow):
             ['Warbands', '3x Exalted Orb', 8, 16, 'Area is inhabited by 2 additional Warbands']
         ]
         # I don't know how to include some of these within the current map tier system, 0,-1,-2 ?  
-        # How would they compare in stats? Not sure about this anymore.
-        # self.fragments = [ 
+        # How would they compare in statistics? Not sure about this anymore.
+        # self.fragments = [
         #     {Map.TimeAdded: 0, Map.Name: 'Sacrifice at Dusk', Map.Tier: 66, Map.Rarity: 'Unique'},
         #     ['Sacrifice at Dawn', 67],
         #     ['Sacrifice at Noon', 68],
@@ -227,7 +228,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
             all_mods = all_mods + '\r\n' + map_data[Map.Mod9]
             self.ui.ms_mods.setText(all_mods)
 
-    def updateUiMapRunning(self, clear = False):
+    def updateUiMapRunning(self, clear=False):
         print('UI Updated')
         if clear:
             self.ui.mr_name.setText('None')
@@ -247,7 +248,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
             self.ui.mr_pack_size.setText(self.ui.ms_pack_size.text())
             self.ui.mr_rarity.setText(self.ui.ms_rarity.text())
             self.ui.mr_mods.setText(self.ui.ms_mods.toPlainText())
-            self.map_mod_text = self.ui.ms_mods.toHtml() # orginal copy for bonus IQ add/remove 
+            self.map_mod_text = self.ui.ms_mods.toHtml() # orginal copy for bonus IQ add/remove
             rarity = self.ui.ms_rarity.text()
             if rarity == 'Rare':
                 self.ui.mr_name.setStyleSheet("color: rgb(170, 170, 0);")
@@ -284,12 +285,11 @@ class MapWatchWindow(QtWidgets.QMainWindow):
                 del_map+' was removed from the database.',
                 1, 1000)
 
-    def addMap(self, unlinked = False):
+    def addMap(self, unlinked=False):
         print('Adding to Map Drops')
-        self.minimizeToSysTray()
-        self.ui_confirm.boxType('confirm')
         add_map = self.mapDB.addMap(self.map_data, unlinked)
         if add_map:
+            self.minimizeToSysTray()
             self.updateWindowTitle()
             self.sysTrayIcon.showMessage(
                 'Map Added',
@@ -297,10 +297,11 @@ class MapWatchWindow(QtWidgets.QMainWindow):
                 1, 1000)
 
     def clearMap(self):
-        self.ui_confirm.boxType('confirm')
-        if self.ui_confirm.exec_('Map Cleared?', 'Is the map cleared?  No more map drops will be linked to this map.'):
-            self.mapDB.clearMap()
-            self.updateUiMapRunning(True)
+        if self.mapDB.map_running:
+            self.ui_confirm.boxType('confirm')
+            if self.ui_confirm.exec_('Map Cleared?', 'Is the current running map cleared?  No more map drops will be linked to this map.'):
+                self.mapDB.clearMap()
+                self.updateUiMapRunning(True)
 
     def runMap(self):
         print('Running Selected Map')
@@ -308,7 +309,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
             self.updateUiMapRunning()
             self.resetBonuses()
 
-    def setDBFile(self, new = False):
+    def setDBFile(self, new=False):
         abs_path = os.path.abspath(os.path.dirname('__file__'))
         if new:
             file_name = QFileDialog.getSaveFileName(self, 'Create New Database File', abs_path+'/data', 'SQLite Files (*.sqlite)')
@@ -387,7 +388,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
     def updateWindowTitle(self):
         if self.mapDB.db_file:
             map_count = self.mapDB.countMapsAdded()
-            self.setWindowTitle(self.appTitle + ' ---> ' + str(map_count) +' map drops in database (' + os.path.basename(self.mapDB.db_file) + ')')
+            self.setWindowTitle(self.appTitle + ' ---> ' + str(map_count) + ' map drops in database (' + os.path.basename(self.mapDB.db_file) + ')')
         else:
             self.setWindowTitle(self.appTitle + ' ---> Map Database Not Loaded')
 
@@ -402,10 +403,12 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         self.ui.menu_mr_clear_map.setEnabled(disable)
         self.ui.menu_mr_run_map.setEnabled(disable)
 
-    def error(self, err_msg, errors={}):
+    def error(self, err_msg, errors=None):
         err_msg += '\n'
-        for err in errors:
-            err_msg += '\n'+str(err)
+        if errors is not None:
+            for err in errors:
+                err_msg += '\n'+str(err)
+                #print(err)
         self.ui_confirm.boxType('error')
         self.ui_confirm.exec_('Error', err_msg)
 
@@ -414,14 +417,14 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         self.mapDB.clearMap() # In-case user forgot to clear thier map before closing app
         self.sysTrayIcon.hide()
         sys.exit()
-    
+
     def closeEvent(self, event):
         # Changes the close button (X) behavior to minimize instead
         # event.ignore()
         # if self.firstClose:
         #     self.sysTrayIcon.showMessage(
         #         'Minimized To System Tray',
-        #         'Map Watch will still continue to run in the background.  Right click and select exit to shut down application.',
+        #         'Map Watch will still continue to run in the background. Right click and select exit to shut down application.',
         #         1, 1000)
         #     self.firstClose = 0
         # self.minimizeToSysTray()
@@ -520,8 +523,8 @@ class Preferences(QtWidgets.QDialog):
     def restoreDefaults(self):
         self.parent.ui_confirm.boxType('confirm')
         if self.parent.ui_confirm.exec_('Restore Defaults?', 'Are you sure you want to restore the default settings?'):
-            writeSettings({})
-            self.parent.settings = readSettings()
+            get_defaults = True
+            self.parent.settings = readSettings(get_defaults)
             self.insertPrefs()
 
     def accept(self):
@@ -542,11 +545,10 @@ class MapWatcher(QThread):
 
     trigger = pyqtSignal(object)
 
-    def __init__(self, parent = None):
+    def __init__(self, parent=None):
         QThread.__init__(self, parent)
         self.exiting = False
         self.check_interval = 3
-        self.newline = r'\r\n'
 
     def __del__(self):
         self.exiting = True
@@ -556,7 +558,7 @@ class MapWatcher(QThread):
         self.start()
 
     def setMapCheckInterval(self, seconds):
-        self.check_interval = seconds;
+        self.check_interval = seconds
 
     def parseMapData(self, copied_str):
         map_rarity =    re.search(r'Rarity:\s(\w*)\n', copied_str)
@@ -579,6 +581,7 @@ class MapWatcher(QThread):
         if map_name1 and map_name2:
             print('Map Name: ' + map_name1.group(1) + ' ' + map_name2.group(1))
             map_data[Map.Name] = map_name1.group(1) + ' ' + map_name2.group(1)
+            #map_data[Map.Name] = 'test'
         elif map_name1:
             print('Map Name: ' + map_name1.group(1))
             map_data[Map.Name] = map_name1.group(1)
@@ -632,7 +635,7 @@ class MapWatcher(QThread):
 
 
 class MapDatabase(object):
-    def __init__(self, parent = None):
+    def __init__(self, parent=None):
         self.parent = parent
         self.table_names = ['Maps_Dropped','Maps_Ran']
         self.unique_col_name = 'Time_Stamp_ID'
@@ -645,7 +648,6 @@ class MapDatabase(object):
     def setDBFile(self, file):
         self.db_file = file
         # TODO: get current map running? has to be saved into db with no time_cleared
-        # TODO: check for tables and see if this DB file has beed setup. If not show error (I don't think I need this anymore with new structure check)
 
     def countMapsAdded(self):
         self.openDB()
@@ -663,26 +665,35 @@ class MapDatabase(object):
             self.conn = sqlite3.connect(self.db_file)
             self.c = self.conn.cursor()
         else:
-            self.parent.error('Error: No database file found. Please select a database file before adding any maps.')
+            self.parent.error('Error: No database file found.', {'Please select a database file before adding any maps.'})
 
     def closeDB(self):
         if self.db_file:
             self.conn.close()
 
-    def addMap(self, map, unlinked = False):
+    def addMap(self, map, unlinked=False):
         if map is None:
+            return None
+        if self.map_running and map[Map.TimeAdded] == self.map_running[Map.TimeAdded]:
+            self.parent.error('Error: Database record could not be created.',
+                {
+                "You can't add the map running to it's own map drops.",
+                "This isn't Back to the Future where you go back in time and bang your own mother to create yourself."
+                })
             return None
         self.openDB()
         map_name = None
         try:
             for field, value in map.items():
                 if int(field) == Map.TimeAdded:
-                    # Note: Will throw error when adding a map that already exist (Time_Stamp) with no "INSERT OR IGNORE".  Do I want this behavior?
-                    self.c.execute("INSERT INTO {tn} ({kcn}) VALUES ({val})".format(tn=self.table_names[0], kcn=self.unique_col_name, val=value))
-                    map_name = map[Map.Name]
+                    self.c.execute("INSERT INTO {tn} ({kcn}) VALUES ({val})".format(
+                            tn=self.table_names[Maps.Dropped],
+                            kcn=self.unique_col_name,
+                            val=value
+                        ))
                 else:
                     self.c.execute("UPDATE {tn} SET {cn}=({val}) WHERE {kcn}=({key})".format(
-                            tn=self.table_names[Maps.Dropped], 
+                            tn=self.table_names[Maps.Dropped],
                             cn=self.column_names[Maps.Dropped][int(field)-1],
                             kcn=self.unique_col_name,
                             val='\"'+value+'\"',
@@ -697,15 +708,23 @@ class MapDatabase(object):
                         val=self.map_running[Map.TimeAdded],
                         key=map[Map.TimeAdded]
                     ))
+            map_name = map[Map.Name]
             self.conn.commit()
-            print('Adding Map')
+            print('Map added to database')
+        except sqlite3.IntegrityError:
+            self.parent.error('Error: Database record already exists.',
+                {"This map has already been added to the database. If you want you may remove (delete) it and re-add it though."})
         except:
             self.parent.error('Error: Database record could not be created.', sys.exc_info())
         self.closeDB()
         return map_name
 
     def runMap(self, map):
-        self.clearMap()
+        if self.map_running and map[Map.TimeAdded] == self.map_running[Map.TimeAdded]:
+            self.parent.error('Error: Database record could not be created.',
+                {"This map is already running. If you would like to clear it click the 'Map Clear' button."})
+            return False
+        self.parent.clearMap()
         self.openDB()
         try:
             for field, value in map.items():
@@ -725,11 +744,11 @@ class MapDatabase(object):
                         ))
             self.conn.commit()
             success = True
-            self.map_running = map
+            #self.map_running = map
+            self.map_running = copy.deepcopy(map)
         except:
             self.parent.error('Error: Database record could not be created.', sys.exc_info())
             success = False
-            #self.map_running = None
         self.closeDB()
         return success
 
@@ -815,7 +834,7 @@ class MapDatabase(object):
         self.closeDB()
         return map_name
 
-    def setupDB(self, file, db_struct_check = False):
+    def setupDB(self, file, db_struct_check=False):
         if not db_struct_check:
             print('Setting up new map database.')
             if os.path.exists(file):
@@ -855,8 +874,9 @@ class MapDatabase(object):
 
 def writeSettings(settings):
     config = configparser.ConfigParser()
-    abs_path = os.path.abspath(os.path.dirname('__file__'))
-    default_settings = {
+    if not settings:
+        abs_path = os.path.abspath(os.path.dirname('__file__'))
+        default_settings = {
                         'MapCheckInterval': '3',
                         'Language': 'English',
                         'LastOpenedDB': abs_path+'\\data\\mw_db001.sqlite',
@@ -865,20 +885,25 @@ def writeSettings(settings):
                         'ZanaLevel': '8',
                         'ZanaDefaultModIndex': '1'
                         }
-    config['DEFAULT'] = default_settings
-    if not settings:
+        config['DEFAULT'] = default_settings
         config['CURRENT'] = default_settings
     else:
-        config['CURRENT'] = settings
+        if config.read('settings.ini'):
+            config['CURRENT'] = settings
+        else:
+            print('No settings file found.  Please restart application to create a default settings file.')
     with open('settings.ini', 'w') as configfile:
         config.write(configfile)
         configfile.close()
 
 
-def readSettings():
+def readSettings(defaults=False):
     config = configparser.ConfigParser()
     if config.read('settings.ini'):
-        return config['CURRENT']
+        if defaults:
+            return config['DEFAULT']
+        else:
+            return config['CURRENT']
     else:
         print('No settings file found, making new settings file with defaults.')
         writeSettings({})
