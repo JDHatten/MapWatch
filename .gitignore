@@ -4,4 +4,5 @@ dist_lite/
 info/
 releases/
 data/*
+js/settings.js
 settings.ini
