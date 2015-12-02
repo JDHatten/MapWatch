@@ -748,12 +748,12 @@ p, li { white-space: pre-wrap; }
   </action>
   <action name="menu_ms_remove_map">
    <property name="text">
-    <string>&amp;Remove Last Map</string>
+    <string>Remove &amp;Last Map</string>
    </property>
   </action>
   <action name="menu_mr_run_map">
    <property name="text">
-    <string>Run Selected Map</string>
+    <string>&amp;Run Selected Map</string>
    </property>
   </action>
   <action name="menu_mr_clear_map">

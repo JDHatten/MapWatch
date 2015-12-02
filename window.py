@@ -305,8 +305,8 @@ class Ui_MainWindow(object):
         self.menu_ms_add_unlinked_map.setText(_translate("MainWindow", "Add Selected Map &Unlinked"))
         self.menu_ms_add_unlinked_map.setToolTip(_translate("MainWindow", "Add to general map drops that are not linked to the currently running map."))
         self.menu_ms_add_map.setText(_translate("MainWindow", "&Add Selected Map"))
-        self.menu_ms_remove_map.setText(_translate("MainWindow", "&Remove Last Map"))
-        self.menu_mr_run_map.setText(_translate("MainWindow", "Run Selected Map"))
+        self.menu_ms_remove_map.setText(_translate("MainWindow", "Remove &Last Map"))
+        self.menu_mr_run_map.setText(_translate("MainWindow", "&Run Selected Map"))
         self.menu_mr_clear_map.setText(_translate("MainWindow", "Map &Cleared"))
         self.menu_open_stats.setText(_translate("MainWindow", "Open &Statistics File"))
 
