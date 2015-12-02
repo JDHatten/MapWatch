@@ -19,6 +19,7 @@ xcopy /s/y %~dp0\images\icon.ico %~dp0\dist\images\
 
 :: Javascript Files
 xcopy /s/y %~dp0\js\sql.js %~dp0\dist\js\
+xcopy /s/y %~dp0\js\map_names.js %~dp0\dist\js\
 
 :: Readme and License
 copy %~dp0\README.md %~dp0\dist\readme.txt
