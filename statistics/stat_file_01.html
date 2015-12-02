@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<title>Map Watch - Map Statistics</title>
+<title>Map Watch - Map Statistics by Grahf_Azura</title>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+<link rel="icon" href="../images/icon.ico">
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" integrity="sha512-dTfge/zgoMYpP7QbHy4gWMEGsbsdZeCXz7irItjcC3sPUFtf0kuFbDz/ixG7ArTxmDjLXDmezHubeNikyKGVyQ==" crossorigin="anonymous">
 <!-- Optional theme -->
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap-theme.min.css" integrity="sha384-aUGj/X2zp5rLCbBxumKTCw2Z50WgIr1vs/PFN4praOTvYXWlVyh2UtNUU0KAUhAX" crossorigin="anonymous">
@@ -17,7 +18,10 @@
 <script src='https://cdn.datatables.net/1.10.10/js/dataTables.bootstrap.min.js'></script>
 
 <script src='../js/sql.js'></script>
+<script src='../js/map_names.js'></script>
+<script src='../js/settings.js'></script>
 <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+
 <script>
 /*
 
@@ -116,36 +120,20 @@ function getData(db) {
     $("#tab5").removeClass("tabs");
 	$("#tab6").removeClass("tabs");
 
-	/* TODO:
-	x	Amount of Map Drops
-	x	Map Drops Per Hour
-	x	Amount of Time Spent in Maps
-	x	Average Time Spent in a Map
-		Favorite Map Ran
-		Most Dropped Map
-	x	Most Dropped Map Tier
-	x	Most Ran Map Tier
-	x	Highest Map Tier Ran (# - Map Name?)
-	x	Highest Map IQ
-	x	Highest Map IR
-	x	Highest Map Pack Size
-    */
     // Search 'Gen Stat'
 	all_gen_stats = [
 		['Amount of Map Drops', 0],
 		['Map Drops Per Hour', 0],
 		['Amount of Time Spent in Maps', 0],
 		['Average Time Spent in each Map', 0],
-		['Favorite Map Ran', ''],
+		['Favorite Map to Run', ''],
 		['Most Dropped Map', ''],
 		['Most Dropped Map Tier', 0],
 		['Most Ran Map Tier', 0],
 		['Highest Map Tier Ran', 0],
 		['Highest Map IQ Ran', 0],
 		['Highest Map IR Ran', 0],
-		['Highest Map Pack Size Ran', 0],
-		['', 0],
-		['', 0]
+		['Highest Map Pack Size Ran', 0]
 	];
 	var all_gen_stat_names = all_gen_stats.map(function (element) {return element[0];});
 
@@ -459,10 +447,10 @@ function getData(db) {
         clear_speeds[tier][1] += 1;
         // Gen Stat
         all_gen_stats[i_avgtm][1] += 1;
-        all_gen_stats[i_amotm][1] += clear_speeds[tier][0];
+        all_gen_stats[i_amotm][1] += end - start;
     }
     for (var i = 1; i < clear_speeds.length; i++) {
-        if (clear_speeds[i][1]) {
+        if (clear_speeds[i][1] > 0) {
             time = formatChartTime(clear_speeds[i][0] / clear_speeds[i][1]);
             var count = '';
             if (clear_speeds[i][1] > 1) {
@@ -494,24 +482,32 @@ function getData(db) {
 	var i_mdh = all_gen_stat_names.indexOf('Map Drops Per Hour');
 	var i_mdm = all_gen_stat_names.indexOf('Most Dropped Map');
 	var i_mdt = all_gen_stat_names.indexOf('Most Dropped Map Tier');
+	var i_fmr = all_gen_stat_names.indexOf('Favorite Map to Run');
 	var i_mrt = all_gen_stat_names.indexOf('Most Ran Map Tier');
 	var i_hmtier = all_gen_stat_names.indexOf('Highest Map Tier Ran');
 	var i_hmiq = all_gen_stat_names.indexOf('Highest Map IQ Ran');
 	var i_hmir = all_gen_stat_names.indexOf('Highest Map IR Ran');
 	var i_hmps = all_gen_stat_names.indexOf('Highest Map Pack Size Ran');
 	var most_dropped = [];
+	var base_map_name = '';
 	var most_dropped_tier = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
 	var all_maps_linked = 0;
 	while (maps_dropped.step()) {
 		var name = maps_dropped.getAsObject()['Name'];
 		var tier = maps_dropped.getAsObject()['Tier'];
 		var drop_ID = maps_dropped.getAsObject()['Dropped_In_ID'];
-		var name_found = most_dropped.map(function (element) { return element[0]; }).indexOf(name);
-		if (name_found > -1) {
-			most_dropped[name_found][1] += 1;
+		for (var i in base_map_names) {
+			if (name.indexOf(base_map_names[i]) > -1) {
+				base_map_name = base_map_names[i];
+				break;
+			}
+		}
+		var name_i = most_dropped.map(function (element) { return element[0]; }).indexOf(base_map_name);
+		if (name_i > -1) {
+			most_dropped[name_i][1] += 1;
 		}
 		else {
-			most_dropped.push([name, 1]);
+			most_dropped.push([base_map_name, 1]);
 		}
 		most_dropped_tier[tier-1] += 1;
 		if (drop_ID > 0) {
@@ -522,29 +518,43 @@ function getData(db) {
 	var all_maps_unlinked = most_dropped_tier.reduce(function(a, b) { return a + b; });
 	all_gen_stats[i_amd][1] = all_maps_unlinked + ' (' + all_maps_linked + ' linked)';
 
-	var most_dropped = most_dropped.reduce(function(max, arr) { return max[1] >= arr[1] ? max : arr; });
-
-	all_gen_stats[i_mdh][1] = Math.round( all_maps_linked / timeToHoursDecimal(all_gen_stats[i_amotm][1]) * 100) / 100;
-
-	// TODO: Going to need to compare (in loop) names of magic/rare maps to a full list of maps to get base names of maps.
-	// Right now this doen't take into acount all base maps ran because of the name changes when rolled.
-	//all_gen_stats[i_mdm][1] = most_dropped[1] + ' ' + most_dropped[0];
+	all_gen_stats[i_mdh][1] = Math.round( all_maps_linked / timeToHoursDecimal(all_gen_stats[i_amotm][1]) * 1000) / 1000;
+	
+	var most_dropped_map = most_dropped.reduce(function(max, arr) { return max[1] >= arr[1] ? max : arr; });
+	all_gen_stats[i_mdm][1] = most_dropped_map[0] + ' (with ' + most_dropped_map[1] + ' drops)';
 	
 	var itier = most_dropped_tier.indexOf(Math.max.apply(Math, most_dropped_tier));
 	all_gen_stats[i_mdt][1] = (itier+1) + ' (with ' + most_dropped_tier[itier] + ' drops)'
 
+	var most_ran = [];
 	var most_ran_tier = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
 	while (maps_ran.step()) {
+		var name = maps_ran.getAsObject()['Name'];
 		var tier = maps_ran.getAsObject()['Tier'];
 		var iq = maps_ran.getAsObject()['IQ'] + maps_ran.getAsObject()['Bonus_IQ'];
 		var ir = maps_ran.getAsObject()['IR'];
 		var ps = maps_ran.getAsObject()['Pack_Size'];
+		for (var i in base_map_names) {
+			if (name.indexOf(base_map_names[i]) > -1) {
+				base_map_name = base_map_names[i];
+				break;
+			}
+		}
+		var name_i = most_ran.map(function (element) { return element[0]; }).indexOf(base_map_name);
+		if (name_i > -1) {
+			most_ran[name_i][1] += 1;
+		}
+		else {
+			most_ran.push([base_map_name, 1]);
+		}
 		most_ran_tier[tier-1] += 1;
 		all_gen_stats[i_hmtier][1] = (tier > all_gen_stats[i_hmtier][1]) ? tier : all_gen_stats[i_hmtier][1];
 		all_gen_stats[i_hmiq][1] = (iq > all_gen_stats[i_hmiq][1]) ? iq : all_gen_stats[i_hmiq][1];
 		all_gen_stats[i_hmir][1] = (ir > all_gen_stats[i_hmir][1]) ? ir : all_gen_stats[i_hmir][1];
 		all_gen_stats[i_hmps][1] = (ps > all_gen_stats[i_hmps][1]) ? ps : all_gen_stats[i_hmps][1];
 	}
+	var most_ran = most_ran.reduce(function(max, arr) { return max[1] >= arr[1] ? max : arr; });
+	all_gen_stats[i_fmr][1] = most_ran[0] + ' (with ' + most_ran[1] + ' ran)';
 	var itier = most_ran_tier.indexOf(Math.max.apply(Math, most_ran_tier));
 	all_gen_stats[i_mrt][1] = (itier+1) + ' (with ' + most_ran_tier[itier] + ' ran)'
 	all_gen_stats[i_amotm][1] = formatTime(all_gen_stats[i_amotm][1]);
@@ -904,13 +914,28 @@ function formatDateTime(unixTimestamp) {
 	var hours = dt.getHours();
 	var minutes = dt.getMinutes();
 	var seconds = dt.getSeconds();
+	var milliseconds = dt.getMilliseconds();
+	var ms_str = '';
+	var ampm = '';
+	if (settings['hour12']) {
+		if (hours > 12) {
+			hours -= 12;
+			ampm = 'pm';
+		}
+		else {
+			ampm = 'am';
+		}
+	}
 	if (hours < 10) 
 		hours = '0' + hours;
 	if (minutes < 10) 
 		minutes = '0' + minutes;
 	if (seconds < 10) 
 		seconds = '0' + seconds;
-	return month + ' ' + day + ' ' + year + ' - ' + hours + ":" + minutes + ":" + seconds;
+	if (settings['milliseconds']) {
+		ms_str = '.' + milliseconds;
+	}
+	return month + ' ' + day + ' ' + year + ' - ' + hours + ":" + minutes + ":" + seconds + ms_str + ' ' + ampm;
 }
 function formatChartTime(unixTimestamp) {
     var dt = new Date(unixTimestamp * 1000);
@@ -918,6 +943,9 @@ function formatChartTime(unixTimestamp) {
     var minutes = dt.getMinutes();
     var seconds = dt.getSeconds();
     var milliseconds = dt.getMilliseconds();
+    if (!settings['milliseconds']) {
+		milliseconds = 0;
+	}
     return [hours, minutes, seconds, milliseconds];
 }
 function formatTime(unixTimestamp, short) {
@@ -931,6 +959,7 @@ function formatTime(unixTimestamp, short) {
     var hour_str = 'Hours';
     var min_str = 'Minutes';
     var sec_str = 'Seconds';
+    var ms_str = '';
     if (days == 1)
     	day_str = 'Day';
     if (hours == 1)
@@ -939,21 +968,18 @@ function formatTime(unixTimestamp, short) {
     	min_str = 'Minute';
     if (seconds == 1)
     	sec_str = 'Second';
-    /*if (hours < 10)
-		hours = '0' + hours;
-	if (minutes < 10)
-		minutes = '0' + minutes;
-	if (seconds < 10)
-		seconds = '0' + seconds;*/
+    if (settings['milliseconds']) {
+		ms_str = '.' + milliseconds;
+	}
 	if (short) {
-		return minutes+' '+min_str+', '+seconds+'.'+milliseconds+' '+sec_str;;
+		return minutes+' '+min_str+', '+seconds+ms_str+' '+sec_str;;
 	}
     else {
-    	return days+' '+day_str+', '+hours+' '+hour_str+', '+minutes+' '+min_str+', '+seconds+'.'+milliseconds+' '+sec_str;
+    	return days+' '+day_str+', '+hours+' '+hour_str+', '+minutes+' '+min_str+', '+seconds+ms_str+' '+sec_str;
     }
 }
 function timeToHoursDecimal(unixTimestamp) {
-	var hours = unixTimestamp / (1000*60*60);
+	var hours = unixTimestamp / (60*60);
     return hours;
 }
 
@@ -1219,8 +1245,6 @@ footer p {
 		</div>
 		<div class="wide-container">
 			<div id="tab6" class="tabs table_tabs">
-				<!-- <h2>All Map Data:</h2>
-				<h4>- All maps ran with each map dropped within it.</h4> -->
 				<table id="map_table" class="table table-striped table-bordered" cellspacing="0" width="100%"></table>
 			</div>
 		</div>
