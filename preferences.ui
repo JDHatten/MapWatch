@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>282</height>
+    <height>311</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -247,7 +247,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>250</y>
+     <y>280</y>
      <width>381</width>
      <height>23</height>
     </rect>
@@ -263,7 +263,7 @@
    <property name="geometry">
     <rect>
      <x>5</x>
-     <y>230</y>
+     <y>260</y>
      <width>388</width>
      <height>16</height>
     </rect>
@@ -275,8 +275,8 @@
   <widget class="QLabel" name="label_6">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>170</y>
+     <x>16</x>
+     <y>200</y>
      <width>141</width>
      <height>21</height>
     </rect>
@@ -297,7 +297,7 @@
    <property name="geometry">
     <rect>
      <x>170</x>
-     <y>170</y>
+     <y>200</y>
      <width>41</width>
      <height>21</height>
     </rect>
@@ -323,8 +323,8 @@
   <widget class="QLabel" name="label_7">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>200</y>
+     <x>16</x>
+     <y>230</y>
      <width>141</width>
      <height>21</height>
     </rect>
@@ -345,7 +345,7 @@
    <property name="geometry">
     <rect>
      <x>170</x>
-     <y>200</y>
+     <y>230</y>
      <width>201</width>
      <height>23</height>
     </rect>
@@ -355,6 +355,69 @@
    </property>
    <property name="maxVisibleItems">
     <number>10</number>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="pref_hour">
+   <property name="geometry">
+    <rect>
+     <x>170</x>
+     <y>170</y>
+     <width>101</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>10</pointsize>
+    </font>
+   </property>
+   <property name="layoutDirection">
+    <enum>Qt::LeftToRight</enum>
+   </property>
+   <property name="text">
+    <string>12 Hour Time</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="pref_millisec">
+   <property name="geometry">
+    <rect>
+     <x>270</x>
+     <y>170</y>
+     <width>131</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>10</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string>Show Milliseconds</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_8">
+   <property name="geometry">
+    <rect>
+     <x>16</x>
+     <y>170</y>
+     <width>141</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>10</pointsize>
+    </font>
+   </property>
+   <property name="layoutDirection">
+    <enum>Qt::LeftToRight</enum>
+   </property>
+   <property name="text">
+    <string>Time Options:</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
    </property>
   </widget>
  </widget>
