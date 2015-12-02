@@ -2,7 +2,8 @@ import sys
 import os
 import re
 import copy
-import msvcrt
+import json
+#import msvcrt
 import sqlite3
 import time
 import datetime
@@ -16,13 +17,16 @@ from PyQt5.QtWidgets import QFileDialog
 from window import Ui_MainWindow
 from confirm import Ui_Confirm
 from preferences import Ui_Preferences
+from globalhotkeys import GlobalHotKeys
 
 # TODOS:
 ### Create custom icons
 ### Create more HTML statistic files
-### am/pm time option (low priority)
+### Settings for statistic files (24/12 time, round numbers, etc)
+### 12/24 time option
 ### Sacrifice Fragments
-###
+### Atziri Maps
+### 
 
 class Map():
     TimeAdded = 0
@@ -80,20 +84,43 @@ class MapWatchWindow(QtWidgets.QMainWindow):
             ['Tempest', '3x Exalted Orb', 8, 16, 'Powerful Tempests can affect both Monsters and You'],
             ['Warbands', '3x Exalted Orb', 8, 16, 'Area is inhabited by 2 additional Warbands']
         ]
-        # I don't know how to include some of these within the current map tier system, 0,-1,-2 ?  
+        # I don't know how to include some of these within the current map tier system, 0,-1,-2 ?
         # How would they compare in statistics? Not sure about this anymore.
         # self.fragments = [
         #     {Map.TimeAdded: 0, Map.Name: 'Sacrifice at Dusk', Map.Tier: 66, Map.Rarity: 'Unique'},
         #     ['Sacrifice at Dawn', 67],
         #     ['Sacrifice at Noon', 68],
         #     ['Sacrifice at Midnight', 69],
-        #     ['The Apex of Sacrifice', 70, 0, 0, 0, 0, 'Unique', '', '']
         #     ['Mortal Grief', 70],
         #     ['Mortal Rage', 71],
         #     ['Mortal Ignorance', 72],
-        #     ['Mortal Hope', 73],
-        #     {Map.TimeAdded: 0, Map.Name: 'The Alluring Abyss', Map.Tier: 13, 200, 0, 0, 0, 'Unique', '100% Monsters Damage', '100% Monsters Life'}
+        #     ['Mortal Hope', 73]
         # ]
+        self.atziri_maps = [
+            {
+                Map.TimeAdded: 0,
+                Map.Name: 'The Apex of Sacrifice',
+                Map.Tier: 3,
+                Map.IQ: 0,
+                Map.BonusIQ: 0,
+                Map.IR: 0,
+                Map.PackSize: 0,
+                Map.Rarity: 'Unique'
+            },
+            {
+                Map.TimeAdded: 0,
+                Map.Name: 'The Alluring Abyss',
+                Map.Tier: 13,
+                Map.IQ: 200,
+                Map.BonusIQ: 0,
+                Map.IR: 0,
+                Map.PackSize: 0,
+                Map.Rarity: 'Unique',
+                Map.Mod1: '100% Monsters Damage',
+                Map.Mod2: '100% Monsters Life'
+            }
+        ]
+
         self.settings = readSettings()
         # System Tray Icon
         self.sysTrayIcon = QtWidgets.QSystemTrayIcon()
@@ -142,6 +169,20 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         self.ui.menu_mr_run_map.triggered.connect(self.runMap)
         self.ui.menu_preferences.triggered.connect(self.getPrefs)
         self.ui.menu_about.triggered.connect(self.about)
+        # Keyboard Shortcuts
+        QtWidgets.QShortcut(QtGui.QKeySequence("A"), self, self.addMap)
+        QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+U"), self, lambda: self.addMap(True))
+        QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+D"), self, self.removeMap)
+        QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+X"), self, self.clearMap)
+        QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+R"), self, self.runMap)
+        QtWidgets.QShortcut(QtGui.QKeySequence("F1"), self, lambda: self.setDBFile(True))
+        QtWidgets.QShortcut(QtGui.QKeySequence("F2"), self, self.setDBFile)
+        QtWidgets.QShortcut(QtGui.QKeySequence("F3"), self, self.openStatFile)
+        QtWidgets.QShortcut(QtGui.QKeySequence("F4"), self, self.getPrefs)
+        QtWidgets.QShortcut(QtGui.QKeySequence("F5"), self, self.about)
+        QtWidgets.QShortcut(QtGui.QKeySequence("F12"), self, self.closeApplication)
+        QtWidgets.QShortcut(QtGui.QKeySequence("Z"), self, lambda: self.giveFocus('ZanaMod'))
+        QtWidgets.QShortcut(QtGui.QKeySequence("Q"), self, lambda: self.giveFocus('BonusIQ'))
         # Setup Map Database
         self.map_data = None
         self.mapDB = MapDatabase(self)
@@ -164,6 +205,12 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         self.showNormal()
         self.activateWindow()
         self.show()
+
+    def giveFocus(self, widget):
+        if widget is 'ZanaMod':
+            self.ui.mr_add_zana_mod.setFocus(Qt.ShortcutFocusReason)
+        elif widget is 'BonusIQ':
+            self.ui.mr_add_bonus_iq.setFocus(Qt.ShortcutFocusReason)
 
     def updateUiMapSelected(self, map_data):
         print('UI Updated')
@@ -204,7 +251,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
             all_mods = map_data[Map.Mod1]
             self.ui.ms_mods.setText(all_mods)
         if Map.Mod2 in map_data:
-            all_mods = all_mods  + '\r\n' + map_data[Map.Mod2]
+            all_mods = all_mods + '\r\n' + map_data[Map.Mod2]
             self.ui.ms_mods.setText(all_mods)
         if Map.Mod3 in map_data:
             all_mods = all_mods + '\r\n' + map_data[Map.Mod3]
@@ -379,6 +426,12 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         self.settings = readSettings()
         self.thread.setMapCheckInterval(int(self.settings['MapCheckInterval']))
         self.changeZanaLevel()
+        hour12 = self.settings['ClockHour12']
+        milliseconds = self.settings['ShowMilliseconds']
+        hour12 = False if hour12 == '0' else True
+        milliseconds = False if milliseconds == '0' else True
+        settings = {'hour12': hour12, 'milliseconds': milliseconds}
+        writeSettingsJS(settings)
         print("Preferences Updated")
 
     def about(self):
@@ -485,7 +538,7 @@ class Preferences(QtWidgets.QDialog):
         self.parent = parent
         self.ui = Ui_Preferences()
         self.ui.setupUi(self)
-        self.setFixedSize(400, 282)
+        self.setFixedSize(400, 311)
         self.loadData()
         self.ui.pref_buttons.accepted.connect(self.accept)
         self.ui.pref_buttons.button(QtWidgets.QDialogButtonBox.Discard).clicked.connect(self.reject)
@@ -511,6 +564,8 @@ class Preferences(QtWidgets.QDialog):
             self.ui.pref_statistics.addItem(os.path.basename(stat_file))
             if stat_file == self.parent.settings['SelectedStatisticsFile']:
                 self.ui.pref_statistics.setCurrentIndex(i)
+        self.ui.pref_hour.setChecked(int(self.parent.settings['ClockHour12']))
+        self.ui.pref_millisec.setChecked(int(self.parent.settings['ShowMilliseconds']))
         self.ui.pref_zana_level.setProperty('valse', int(self.parent.settings['ZanaLevel']))
         self.ui.pref_defualt_zana_mod.clear()
         for i, zana_mod in enumerate(self.parent.zana_mods):
@@ -531,6 +586,8 @@ class Preferences(QtWidgets.QDialog):
         self.parent.settings['MapCheckInterval'] = str(self.ui.pref_map_check.property('value'))
         self.parent.settings['LoadLastOpenedDB'] = str(self.ui.pref_startup.checkState())
         self.parent.settings['SelectedStatisticsFile'] = self.statistics_files[self.ui.pref_statistics.currentIndex()]
+        self.parent.settings['ClockHour12'] = str(self.ui.pref_hour.checkState())
+        self.parent.settings['ShowMilliseconds'] = str(self.ui.pref_millisec.checkState())
         self.parent.settings['ZanaLevel'] = str(self.ui.pref_zana_level.property('value'))
         self.parent.settings['ZanaDefaultModIndex'] = str(self.ui.pref_defualt_zana_mod.currentIndex())
         writeSettings(self.parent.settings)
@@ -581,7 +638,6 @@ class MapWatcher(QThread):
         if map_name1 and map_name2:
             print('Map Name: ' + map_name1.group(1) + ' ' + map_name2.group(1))
             map_data[Map.Name] = map_name1.group(1) + ' ' + map_name2.group(1)
-            #map_data[Map.Name] = 'test'
         elif map_name1:
             print('Map Name: ' + map_name1.group(1))
             map_data[Map.Name] = map_name1.group(1)
@@ -673,6 +729,8 @@ class MapDatabase(object):
 
     def addMap(self, map, unlinked=False):
         if map is None:
+            self.parent.error('Error: Database record could not be created.',
+                {"No map has been selected. Copy (Ctrl+C) a map from Path of Exile first."})
             return None
         if self.map_running and map[Map.TimeAdded] == self.map_running[Map.TimeAdded]:
             self.parent.error('Error: Database record could not be created.',
@@ -720,6 +778,10 @@ class MapDatabase(object):
         return map_name
 
     def runMap(self, map):
+        if map is None:
+            self.parent.error('Error: Database record could not be created.',
+                {"No map has been selected. Copy (Ctrl+C) a map from Path of Exile first."})
+            return False
         if self.map_running and map[Map.TimeAdded] == self.map_running[Map.TimeAdded]:
             self.parent.error('Error: Database record could not be created.',
                 {"This map is already running. If you would like to clear it click the 'Map Clear' button."})
@@ -758,8 +820,8 @@ class MapDatabase(object):
             self.openDB()
             try:
                 #for i, col in {Map.BonusIQ: 'Bonus_IQ', Map.Mod9: 'Mod9'}:
-                for i, col in enumerate(self.column_names[Maps.Ran]): # looks like shit, but it works in loop
-                    if i in [Map.BonusIQ-1, Map.Mod9-1]:
+                for i, col in enumerate(self.column_names[Maps.Ran]): 
+                    if i in [Map.BonusIQ-1, Map.Mod9-1]: # looks like shit, but it works in loop
                         self.c.execute("UPDATE {tn} SET {cn}=({val}) WHERE {kcn}=({key})".format(
                                 tn=self.table_names[Maps.Ran],
                                 cn=col,
@@ -882,6 +944,8 @@ def writeSettings(settings):
                         'LastOpenedDB': abs_path+'\\data\\mw_db001.sqlite',
                         'LoadLastOpenedDB': '2',
                         'SelectedStatisticsFile': abs_path+'\\statistics\\stat_file_01.html',
+                        'ShowMilliseconds': '0',
+                        'ClockHour12': '2',
                         'ZanaLevel': '8',
                         'ZanaDefaultModIndex': '1'
                         }
@@ -908,6 +972,25 @@ def readSettings(defaults=False):
         print('No settings file found, making new settings file with defaults.')
         writeSettings({})
         return readSettings()
+
+
+def writeSettingsJS(settings):
+    if not settings:
+        settings = {'hour12': True, 'milliseconds': False}
+    settings = json.JSONEncoder().encode(settings)
+    settings = 'var settings = '+settings
+    with open('js\settings.js', 'w') as outfile:
+        outfile.write(settings)
+
+
+# def readSettingsJS():
+#     with open('js\settings.js') as data_file:
+#         #settings = json.load(data_file)
+#         settings = data_file.readlines()
+#     settings = re.search(r'var.*({.*})', settings[0])
+#     settings = json.loads(settings.group(1))
+#     print(settings)
+#     return settings
 
 
 def main():
