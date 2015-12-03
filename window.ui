@@ -294,20 +294,20 @@ p, li { white-space: pre-wrap; }
     <widget class="QLabel" name="ms_time_stamp">
      <property name="geometry">
       <rect>
-       <x>410</x>
+       <x>390</x>
        <y>10</y>
-       <width>47</width>
+       <width>81</width>
        <height>16</height>
       </rect>
      </property>
      <property name="text">
-      <string>00:00:00</string>
+      <string>00:00:00.00</string>
      </property>
     </widget>
     <widget class="QLabel" name="label_13">
      <property name="geometry">
       <rect>
-       <x>310</x>
+       <x>290</x>
        <y>10</y>
        <width>101</width>
        <height>16</height>
