@@ -8,8 +8,11 @@ import sqlite3
 import time
 import datetime
 import pyperclip
+import pywinauto
 import configparser
 import webbrowser
+import win32gui
+import win32con
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import pyqtSignal, Qt, QThread
@@ -17,13 +20,10 @@ from PyQt5.QtWidgets import QFileDialog
 from window import Ui_MainWindow
 from confirm import Ui_Confirm
 from preferences import Ui_Preferences
-from globalhotkeys import GlobalHotKeys
 
 # TODOS:
 ### Create custom icons
 ### Create more HTML statistic files
-### Settings for statistic files (24/12 time, round numbers, etc)
-### 12/24 time option
 ### Sacrifice Fragments
 ### Atziri Maps
 ### 
@@ -66,7 +66,6 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         self.version = '0.2'
         self.appTitle = 'Map Watch (v'+self.version+')'
         self.setWindowIcon(QtGui.QIcon(r'images\\icon.ico'))
-        self.setWindowFlags(Qt.CustomizeWindowHint|Qt.WindowCloseButtonHint|Qt.WindowStaysOnTopHint|Qt.X11BypassWindowManagerHint)
         self.firstClose = 1
         self.zana_mods = [ # TODO: maybe load from outside source? settings.ini?
             ['None', 'Free', 0, 0, ''],
@@ -120,8 +119,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
                 Map.Mod2: '100% Monsters Life'
             }
         ]
-
-        self.settings = readSettings()
+        #self.settings = readSettings()
         # System Tray Icon
         self.sysTrayIcon = QtWidgets.QSystemTrayIcon()
         self.sysTrayIcon.setIcon(QtGui.QIcon(r'images\\icon.ico'))
@@ -150,6 +148,11 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         self.ui_confirm = ConfirmDialog(self)
         self.ui_prefs = Preferences(self)
         self.setPrefs()
+        self.addZanaMods()
+        if int(self.settings['AlwaysOnTop']):
+            self.setWindowFlags(Qt.CustomizeWindowHint|Qt.WindowCloseButtonHint|Qt.WindowStaysOnTopHint|Qt.X11BypassWindowManagerHint)
+        else:
+            self.setWindowFlags(Qt.CustomizeWindowHint|Qt.WindowCloseButtonHint|Qt.X11BypassWindowManagerHint)
         # Button Actions
         self.ui.ms_add_map.clicked.connect(self.addMap)
         self.ui.ms_remove_map.clicked.connect(self.removeMap)
@@ -195,7 +198,16 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         else:
             self.buttonAccess(False)
         self.updateWindowTitle()
-        self.addZanaMods()
+        #Windows hwnd
+        self._handle = None
+        self.window = None
+
+    def _window_enum_callback(self, hwnd, wildcard):
+        '''Pass to win32gui.EnumWindows() to check all the opened windows'''
+        if re.match(wildcard, str(win32gui.GetWindowText(hwnd))) != None:
+            self._handle = hwnd
+            print('hwnd: '+str(self._handle))
+        #print(str(win32gui.GetWindowText(hwnd)))
 
     def restore(self, action):
         if action == self.sysTrayIcon.DoubleClick:
@@ -203,8 +215,15 @@ class MapWatchWindow(QtWidgets.QMainWindow):
 
     def popup(self):
         self.showNormal()
+        #self.show()
         self.activateWindow()
-        self.show()
+        if self._handle:
+            win32gui.ShowWindow(self._handle, win32con.SW_RESTORE)
+            win32gui.BringWindowToTop(self._handle)
+            win32gui.SetWindowPos(self._handle,win32con.HWND_NOTOPMOST, 0, 0, 0, 0, win32con.SWP_NOMOVE + win32con.SWP_NOSIZE)  
+            win32gui.SetWindowPos(self._handle,win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOMOVE + win32con.SWP_NOSIZE)  
+            win32gui.SetWindowPos(self._handle,win32con.HWND_NOTOPMOST, 0, 0, 0, 0, win32con.SWP_SHOWWINDOW + win32con.SWP_NOMOVE + win32con.SWP_NOSIZE)
+            self.window.SetFocus() #STEAL FOCUS! HAHA, fuck you Microsoft
 
     def giveFocus(self, widget):
         if widget is 'ZanaMod':
@@ -223,7 +242,15 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         self.ui.ms_mods.setText('None')
         # Get each piece of map info and update UI lables, etc
         if Map.TimeAdded in map_data:
-            time_added = datetime.datetime.fromtimestamp(map_data[Map.TimeAdded]).strftime('%H:%M:%S')
+            h = '%H'
+            ms = ''
+            p = ''
+            if int(self.settings['ClockHour12']):
+                h = '%I'
+                p = ' %p'
+            if int(self.settings['ShowMilliseconds']):
+                ms = '.%f'
+            time_added = datetime.datetime.fromtimestamp(map_data[Map.TimeAdded]).strftime(h+':%M:%S'+ms+p)
             self.ui.ms_time_stamp.setText(time_added)
         if Map.Name in map_data:
             self.ui.ms_name.setText(map_data[Map.Name])
@@ -349,6 +376,11 @@ class MapWatchWindow(QtWidgets.QMainWindow):
             if self.ui_confirm.exec_('Map Cleared?', 'Is the current running map cleared?  No more map drops will be linked to this map.'):
                 self.mapDB.clearMap()
                 self.updateUiMapRunning(True)
+                return True
+            else:
+                return False
+        else:
+            return True
 
     def runMap(self):
         print('Running Selected Map')
@@ -357,22 +389,23 @@ class MapWatchWindow(QtWidgets.QMainWindow):
             self.resetBonuses()
 
     def setDBFile(self, new=False):
-        abs_path = os.path.abspath(os.path.dirname('__file__'))
-        if new:
-            file_name = QFileDialog.getSaveFileName(self, 'Create New Database File', abs_path+'/data', 'SQLite Files (*.sqlite)')
+        if self.clearMap():
+            abs_path = os.path.abspath(os.path.dirname('__file__'))
+            if new:
+                file_name = QFileDialog.getSaveFileName(self, 'Create New Database File', abs_path+'/data', 'SQLite Files (*.sqlite)')
+                if file_name[0]:
+                    self.mapDB.setupDB(file_name[0])
+            else:
+                file_name = QFileDialog.getOpenFileName(self, 'Load Database File', abs_path+'/data', 'SQLite Files (*.sqlite)')
+            # Update settings
             if file_name[0]:
-                self.mapDB.setupDB(file_name[0])
-        else:
-            file_name = QFileDialog.getOpenFileName(self, 'Load Database File', abs_path+'/data', 'SQLite Files (*.sqlite)')
-        # Update settings
-        if file_name[0]:
-            self.mapDB.setDBFile(file_name[0])
-            if not new:
-                self.mapDB.setupDB('Checking DB Structure', True)
-            self.updateWindowTitle()
-            self.buttonAccess(True)
-            self.settings['LastOpenedDB'] = file_name[0]
-            writeSettings(self.settings)
+                self.mapDB.setDBFile(file_name[0])
+                if not new:
+                    self.mapDB.setupDB('Checking DB Structure', True)
+                self.updateWindowTitle()
+                self.buttonAccess(True)
+                self.settings['LastOpenedDB'] = file_name[0]
+                writeSettings(self.settings)
 
     def addZanaMods(self):
         print('Adding Zana Mods to Combo Box')
@@ -473,15 +506,15 @@ class MapWatchWindow(QtWidgets.QMainWindow):
 
     def closeEvent(self, event):
         # Changes the close button (X) behavior to minimize instead
-        # event.ignore()
-        # if self.firstClose:
-        #     self.sysTrayIcon.showMessage(
-        #         'Minimized To System Tray',
-        #         'Map Watch will still continue to run in the background. Right click and select exit to shut down application.',
-        #         1, 1000)
-        #     self.firstClose = 0
-        # self.minimizeToSysTray()
-        self.closeApplication()
+        event.ignore()
+        if self.firstClose:
+            self.sysTrayIcon.showMessage(
+                'Minimized To System Tray',
+                'Map Watch will still continue to run in the background. Right click and select exit to shut down application.',
+                1, 1000)
+            self.firstClose = 0
+        self.minimizeToSysTray()
+        #self.closeApplication()
 
     def minimizeToSysTray(self):
         self.showMinimized()
@@ -806,7 +839,6 @@ class MapDatabase(object):
                         ))
             self.conn.commit()
             success = True
-            #self.map_running = map
             self.map_running = copy.deepcopy(map)
         except:
             self.parent.error('Error: Database record could not be created.', sys.exc_info())
@@ -819,16 +851,14 @@ class MapDatabase(object):
             print('updateMapRunning')
             self.openDB()
             try:
-                #for i, col in {Map.BonusIQ: 'Bonus_IQ', Map.Mod9: 'Mod9'}:
-                for i, col in enumerate(self.column_names[Maps.Ran]): 
-                    if i in [Map.BonusIQ-1, Map.Mod9-1]: # looks like shit, but it works in loop
-                        self.c.execute("UPDATE {tn} SET {cn}=({val}) WHERE {kcn}=({key})".format(
-                                tn=self.table_names[Maps.Ran],
-                                cn=col,
-                                kcn=self.unique_col_name,
-                                val='\"'+str(self.map_running[i+1])+'\"',
-                                key=self.map_running[Map.TimeAdded]
-                            ))
+                for col, i in {'Bonus_IQ': Map.BonusIQ, 'Mod9': Map.Mod9}.items():
+                    self.c.execute("UPDATE {tn} SET {cn}=({val}) WHERE {kcn}=({key})".format(
+                            tn=self.table_names[Maps.Ran],
+                            cn=str(col),
+                            kcn=self.unique_col_name,
+                            val='\"'+str(self.map_running[i])+'\"',
+                            key=self.map_running[Map.TimeAdded]
+                        ))
                 self.conn.commit()
             except:
                 self.parent.error('Error: Database record could not be updated.', sys.exc_info())
@@ -934,25 +964,16 @@ class MapDatabase(object):
         self.closeDB()
 
 
-def writeSettings(settings):
+def writeSettings(settings, defaults=None):
     config = configparser.ConfigParser()
+    default_settings = settingDefaults()
     if not settings:
-        abs_path = os.path.abspath(os.path.dirname('__file__'))
-        default_settings = {
-                        'MapCheckInterval': '3',
-                        'Language': 'English',
-                        'LastOpenedDB': abs_path+'\\data\\mw_db001.sqlite',
-                        'LoadLastOpenedDB': '2',
-                        'SelectedStatisticsFile': abs_path+'\\statistics\\stat_file_01.html',
-                        'ShowMilliseconds': '0',
-                        'ClockHour12': '2',
-                        'ZanaLevel': '8',
-                        'ZanaDefaultModIndex': '1'
-                        }
         config['DEFAULT'] = default_settings
         config['CURRENT'] = default_settings
     else:
         if config.read('settings.ini'):
+            if defaults: #update
+                config['DEFAULT'] = defaults
             config['CURRENT'] = settings
         else:
             print('No settings file found.  Please restart application to create a default settings file.')
@@ -967,11 +988,40 @@ def readSettings(defaults=False):
         if defaults:
             return config['DEFAULT']
         else:
+            verifySettings(config, 'CURRENT')
             return config['CURRENT']
     else:
         print('No settings file found, making new settings file with defaults.')
         writeSettings({})
         return readSettings()
+
+
+def verifySettings(config, section):
+    missing_option = False
+    default_settings = settingDefaults()
+    for option, value in default_settings.items():
+        if not config.has_option(section, option):
+            config.set(section, option, value)
+            config.set('DEFAULT', option, value)
+            missing_option = True
+    if missing_option:
+        writeSettings(config[section], config['DEFAULT'])
+
+
+def settingDefaults():
+    abs_path = os.path.abspath(os.path.dirname('__file__'))
+    return {
+            'MapCheckInterval': '3',
+            'AlwaysOnTop': '2',
+            'Language': 'English',
+            'LastOpenedDB': abs_path+'\\data\\mw_db001.sqlite',
+            'LoadLastOpenedDB': '2',
+            'SelectedStatisticsFile': abs_path+'\\statistics\\stat_file_01.html',
+            'ShowMilliseconds': '0',
+            'ClockHour12': '2',
+            'ZanaLevel': '8',
+            'ZanaDefaultModIndex': '1'
+            }
 
 
 def writeSettingsJS(settings):
@@ -997,6 +1047,13 @@ def main():
     app = QtWidgets.QApplication(sys.argv)
     mw_ui = MapWatchWindow()
     mw_ui.show()
+
+    # All this just to steal focus, damn it Microsoft
+    win32gui.EnumWindows(mw_ui._window_enum_callback, 'Map Watch')
+    pywinapp = pywinauto.application.Application()
+    if mw_ui._handle:
+        mw_ui.window = pywinapp.window_(handle=mw_ui._handle)
+
     sys.exit(app.exec_())
 
 if __name__ == '__main__':
