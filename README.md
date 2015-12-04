@@ -2,6 +2,9 @@
 #### A Path of Exile application that collects and reports map drop data and statistics.
 
 
+![MapWatch]( http://i.imgur.com/10BCzec.png "Map Watch - Main Window")
+
+
 ### Description:
 *Map Watch* is an application that records map drops in the game Path of Exile.  Once enough data is collected it can show different statistics on the map drops recorded via a local webpage.  
 
