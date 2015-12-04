@@ -1,6 +1,7 @@
 __pycache__/
 dist/
 dist_lite/
+MapWatch/
 info/
 releases/
 data/*
