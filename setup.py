@@ -11,13 +11,13 @@ setup(
     ],
     options={'py2exe': {
             'compressed': True,
-            'dist_dir': 'dist',
+            'dist_dir': 'MapWatch',
             'optimize': 1,
-            'excludes': ['pydoc', 'doctest', 'pdb', 'inspect', 'pyreadline', 'locale', 'optparse', 'pickle', 'calendar']
+            'excludes': ['pydoc', 'doctest', 'pdb', 'inspect', 'pyreadline', 'optparse', 'calendar']
         }
     },
     windows=[{
-        "script": "mapwatch.py",
-        "icon_resources": [(0, r"images\\icon.ico")]
+        'script': 'mapwatch.py',
+        'icon_resources': [(0, r'images\\icon.ico')]
     }]
 )
