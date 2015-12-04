@@ -95,7 +95,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         #     ['Mortal Ignorance', 72],
         #     ['Mortal Hope', 73]
         # ]
-        self.atziri_maps = [
+        self.atziri_maps = [ #TODO
             {
                 Map.TimeAdded: 0,
                 Map.Name: 'The Apex of Sacrifice',
@@ -149,10 +149,10 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         self.ui_prefs = Preferences(self)
         self.setPrefs()
         self.addZanaMods()
-        if int(self.settings['AlwaysOnTop']):
-            self.setWindowFlags(Qt.CustomizeWindowHint|Qt.WindowCloseButtonHint|Qt.WindowStaysOnTopHint|Qt.X11BypassWindowManagerHint)
-        else:
+        if not int(self.settings['AlwaysOnTop']):
             self.setWindowFlags(Qt.CustomizeWindowHint|Qt.WindowCloseButtonHint|Qt.X11BypassWindowManagerHint)
+        else:
+            self.setWindowFlags(Qt.CustomizeWindowHint|Qt.WindowCloseButtonHint|Qt.WindowStaysOnTopHint|Qt.X11BypassWindowManagerHint)  
         # Button Actions
         self.ui.ms_add_map.clicked.connect(self.addMap)
         self.ui.ms_remove_map.clicked.connect(self.removeMap)
@@ -178,14 +178,14 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+D"), self, self.removeMap)
         QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+X"), self, self.clearMap)
         QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+R"), self, self.runMap)
+        QtWidgets.QShortcut(QtGui.QKeySequence("Z"), self, lambda: self.giveFocus('ZanaMod'))
+        QtWidgets.QShortcut(QtGui.QKeySequence("Q"), self, lambda: self.giveFocus('BonusIQ'))
         QtWidgets.QShortcut(QtGui.QKeySequence("F1"), self, lambda: self.setDBFile(True))
         QtWidgets.QShortcut(QtGui.QKeySequence("F2"), self, self.setDBFile)
         QtWidgets.QShortcut(QtGui.QKeySequence("F3"), self, self.openStatFile)
         QtWidgets.QShortcut(QtGui.QKeySequence("F4"), self, self.getPrefs)
         QtWidgets.QShortcut(QtGui.QKeySequence("F5"), self, self.about)
         QtWidgets.QShortcut(QtGui.QKeySequence("F12"), self, self.closeApplication)
-        QtWidgets.QShortcut(QtGui.QKeySequence("Z"), self, lambda: self.giveFocus('ZanaMod'))
-        QtWidgets.QShortcut(QtGui.QKeySequence("Q"), self, lambda: self.giveFocus('BonusIQ'))
         # Setup Map Database
         self.map_data = None
         self.mapDB = MapDatabase(self)
@@ -419,7 +419,6 @@ class MapWatchWindow(QtWidgets.QMainWindow):
 
     def changeZanaLevel(self):
         self.zana_mods[1][ZanaMod.IQ] = int(self.settings['ZanaLevel'])
-        #self.zana_mods[1][ZanaMod.Desc] = '+' + self.settings['ZanaLevel'] + self.zana_mods[1][ZanaMod.Desc][2:]
         self.addZanaMods()
 
     def changeZanaMod(self):
@@ -457,7 +456,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
 
     def setPrefs(self):
         self.settings = readSettings()
-        self.thread.setMapCheckInterval(int(self.settings['MapCheckInterval']))
+        self.thread.setMapCheckInterval(float(self.settings['MapCheckInterval']))
         self.changeZanaLevel()
         hour12 = self.settings['ClockHour12']
         milliseconds = self.settings['ShowMilliseconds']
@@ -522,6 +521,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
 
 
 class ConfirmDialog(QtWidgets.QDialog):
+    
     def __init__(self, parent=None):
         super().__init__(parent)
         self.ui = Ui_Confirm()
@@ -547,31 +547,36 @@ class ConfirmDialog(QtWidgets.QDialog):
             self.setFixedSize(270, 89)
             self.ui.buttonBox.setGeometry(QtCore.QRect(10, 60, 251, 23))
             self.ui.message.setGeometry(QtCore.QRect(10, 0, 251, 61))
+            self.ui.message.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
             self.ui.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.No|QtWidgets.QDialogButtonBox.Yes)
         if type is 'confirmXL':
             self.setFixedSize(270, 149)
             self.ui.buttonBox.setGeometry(QtCore.QRect(10, 120, 251, 23))
             self.ui.message.setGeometry(QtCore.QRect(10, 0, 251, 121))
+            self.ui.message.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
             self.ui.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.No|QtWidgets.QDialogButtonBox.Yes)
         elif type is 'error':
             self.setFixedSize(270, 199)
             self.ui.buttonBox.setGeometry(QtCore.QRect(10, 170, 251, 23))
             self.ui.message.setGeometry(QtCore.QRect(10, 0, 251, 161))
+            self.ui.message.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
             self.ui.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Ok)
         elif type is 'about':
             self.setFixedSize(270, 189)
             self.ui.buttonBox.setGeometry(QtCore.QRect(10, 160, 251, 23))
             self.ui.message.setGeometry(QtCore.QRect(10, 0, 251, 141))
+            self.ui.message.setAlignment(Qt.AlignHCenter|Qt.AlignVCenter)
             self.ui.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Ok)
 
 
 class Preferences(QtWidgets.QDialog):
+    
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent = parent
         self.ui = Ui_Preferences()
         self.ui.setupUi(self)
-        self.setFixedSize(400, 311)
+        self.setFixedSize(400, 342)
         self.loadData()
         self.ui.pref_buttons.accepted.connect(self.accept)
         self.ui.pref_buttons.button(QtWidgets.QDialogButtonBox.Discard).clicked.connect(self.reject)
@@ -589,7 +594,7 @@ class Preferences(QtWidgets.QDialog):
                 self.statistics_files.append(statistics_dir+file_name)
 
     def insertPrefs(self):
-        self.ui.pref_map_check.setProperty('value', int(self.parent.settings['MapCheckInterval']))
+        self.ui.pref_map_check.setProperty('value', float(self.parent.settings['MapCheckInterval']))
         self.ui.pref_startup.setChecked(int(self.parent.settings['LoadLastOpenedDB']))
         self.ui.pref_db_path.setText((self.parent.settings['LastOpenedDB']))
         self.ui.pref_statistics.clear()
@@ -607,6 +612,7 @@ class Preferences(QtWidgets.QDialog):
                 self.ui.pref_defualt_zana_mod.setCurrentIndex(i)
             # if self.ui.pref_zana_level.property('value') < zana_mod[ZanaMod.Level]:
             #     break
+        self.ui.pref_on_top.setChecked(int(self.parent.settings['AlwaysOnTop']))
 
     def restoreDefaults(self):
         self.parent.ui_confirm.boxType('confirm')
@@ -623,6 +629,7 @@ class Preferences(QtWidgets.QDialog):
         self.parent.settings['ShowMilliseconds'] = str(self.ui.pref_millisec.checkState())
         self.parent.settings['ZanaLevel'] = str(self.ui.pref_zana_level.property('value'))
         self.parent.settings['ZanaDefaultModIndex'] = str(self.ui.pref_defualt_zana_mod.currentIndex())
+        self.parent.settings['AlwaysOnTop'] = str(self.ui.pref_on_top.checkState())
         writeSettings(self.parent.settings)
         super().accept()
 
@@ -638,7 +645,7 @@ class MapWatcher(QThread):
     def __init__(self, parent=None):
         QThread.__init__(self, parent)
         self.exiting = False
-        self.check_interval = 3
+        self.check_interval = 2.0
 
     def __del__(self):
         self.exiting = True
@@ -724,6 +731,7 @@ class MapWatcher(QThread):
 
 
 class MapDatabase(object):
+    
     def __init__(self, parent=None):
         self.parent = parent
         self.table_names = ['Maps_Dropped','Maps_Ran']
@@ -1011,7 +1019,7 @@ def verifySettings(config, section):
 def settingDefaults():
     abs_path = os.path.abspath(os.path.dirname('__file__'))
     return {
-            'MapCheckInterval': '3',
+            'MapCheckInterval': '2.0',
             'AlwaysOnTop': '2',
             'Language': 'English',
             'LastOpenedDB': abs_path+'\\data\\mw_db001.sqlite',
@@ -1033,23 +1041,13 @@ def writeSettingsJS(settings):
         outfile.write(settings)
 
 
-# def readSettingsJS():
-#     with open('js\settings.js') as data_file:
-#         #settings = json.load(data_file)
-#         settings = data_file.readlines()
-#     settings = re.search(r'var.*({.*})', settings[0])
-#     settings = json.loads(settings.group(1))
-#     print(settings)
-#     return settings
-
-
 def main():
     app = QtWidgets.QApplication(sys.argv)
     mw_ui = MapWatchWindow()
     mw_ui.show()
 
     # All this just to steal focus, damn it Microsoft
-    win32gui.EnumWindows(mw_ui._window_enum_callback, 'Map Watch')
+    win32gui.EnumWindows(mw_ui._window_enum_callback, r'Map Watch \(')
     pywinapp = pywinauto.application.Application()
     if mw_ui._handle:
         mw_ui.window = pywinapp.window_(handle=mw_ui._handle)
