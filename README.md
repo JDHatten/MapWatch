@@ -17,10 +17,10 @@ Once a suitable about of map data has been collected you can open a statistics f
 ### Important Note:
 It is highly recommended you play Path of Exile in a **Windowed Mode** while using this application.  Playing in Full Screen will cause problems that may lead to your death in game (i.e. the game might minimize).  Don't say I didn't warn you.
 
-For version 0.2+ it is recommended you start a new database file (or overwrite).  Some statistics might be incorrect because of a change in the database structure.  
+For version 0.2+ it is recommended you start a new database file (or overwrite existing).  Some statistics might be incorrect because of a change in the database structure.  
 
 
-### Keyboard Shortcuts
+### Keyboard Shortcuts:
 | Action | Shortcut |
 | :----- | :------: |
 | Add Map | A |
@@ -38,7 +38,7 @@ For version 0.2+ it is recommended you start a new database file (or overwrite).
 | Exit | F12 |
 
 
-### Sample Map Data
+### Sample Map Data:
 This can be used to test the Map Watch application without having to run Path of Exile.  Simply highlight and copy the complete block of text below while the application is running.
 ```
 Rarity: Rare
@@ -62,7 +62,7 @@ Travel to this Map by using it in the Eternal Laboratory or a personal Map Devic
 ```
 
 ### Versions:
-0.2 
+*0.2*
 * *New:* Added Zana mods and Bonus IQ that can be added to running maps
 * Added two more general statistics to stat_file_01.html
 * Added many keyboard shortcuts for different actions
@@ -74,7 +74,7 @@ Travel to this Map by using it in the Eternal Laboratory or a personal Map Devic
 * Default settings in settings.ini file can now be changed and restored
 * The Map Watch window now properly gains/steals focus when a map is selected
 
-0.1 
+*0.1*
 * Initial Release
 
 
