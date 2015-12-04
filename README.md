@@ -2,7 +2,7 @@
 #### A Path of Exile application that collects and reports map drop data and statistics.
 
 
-![MapWatch]( http://i.imgur.com/10BCzec.png "Map Watch - Main Window")
+![MapWatch](http://i.imgur.com/fOi1ayu.png "Map Watch - Main Window")
 
 
 ### Description:
