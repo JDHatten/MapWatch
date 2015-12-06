@@ -417,9 +417,9 @@
   <widget class="QCheckBox" name="pref_on_top">
    <property name="geometry">
     <rect>
-     <x>10</x>
+     <x>90</x>
      <y>260</y>
-     <width>231</width>
+     <width>221</width>
      <height>21</height>
     </rect>
    </property>
@@ -435,23 +435,10 @@
     <enum>Qt::RightToLeft</enum>
    </property>
    <property name="text">
-    <string>* Always Keep Map Watch On Top:  </string>
+    <string>Always Keep Map Watch On Top:  </string>
    </property>
    <property name="checked">
     <bool>false</bool>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_9">
-   <property name="geometry">
-    <rect>
-     <x>260</x>
-     <y>260</y>
-     <width>101</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>* Requires Restart</string>
    </property>
   </widget>
   <widget class="QDoubleSpinBox" name="pref_map_check">
