@@ -803,7 +803,7 @@ function allMapDataTable(all_maps_ran, all_maps_dropped) {
 	        columns: [
 	            {
 	                class:          "details-control",
-	                orderable:      false,
+	                orderable:      true,
 	                //data:           null,
 	                defaultContent: "",
 	                searchable: 	false
@@ -832,7 +832,7 @@ function allMapDataTable(all_maps_ran, all_maps_dropped) {
 	                	}
 	                	end = formatDateTime(+row[11]);
 	                	clear_time = formatTime(row[11] - data, true);
-	                	return start + '<br>' + end + '<br>' + clear_time;
+	                	return '<span class="map_ID">'+data+'</span>'+start+'<br>'+end+'<br>'+clear_time;
 	                },
 	                targets: 1
 	            },
@@ -1158,6 +1158,9 @@ td.details-control {
 }
 tr.details td.details-control {
     background: url('../images/details_close.png') no-repeat center center;
+}
+td span.map_ID {
+	display: none;
 }
 .dataTables_wrapper .dataTables_length, 
 .dataTables_wrapper .dataTables_filter, 
