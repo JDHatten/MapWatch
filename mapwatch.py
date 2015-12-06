@@ -24,8 +24,8 @@ from preferences import Ui_Preferences
 # TODOS:
 ### Create custom icons
 ### Create more HTML statistic files
-### Sacrifice Fragments
-### Atziri Maps
+### Sacrifice Fragments ...eh
+### 
 ### 
 
 class Map():
@@ -51,6 +51,11 @@ class Maps():
     Dropped = 0
     Ran = 1
 
+class MapType():
+    Standard = 0
+    Fragment = 1
+    RareFragment = 2
+
 class ZanaMod():
     Name = 0
     Cost = 1
@@ -58,12 +63,18 @@ class ZanaMod():
     IQ = 3
     Desc = 4
 
+class Button():
+    Add = 0
+    Remove = 1
+    Run = 2
+    Clear = 3
+
 class MapWatchWindow(QtWidgets.QMainWindow):
 
     def __init__(self, parent=None):
         super().__init__(parent)
         # General Settings
-        self.version = '0.2'
+        self.version = '0.3'
         self.appTitle = 'Map Watch (v'+self.version+')'
         self.setWindowIcon(QtGui.QIcon(r'images\\icon.ico'))
         self.firstClose = 1
@@ -83,43 +94,9 @@ class MapWatchWindow(QtWidgets.QMainWindow):
             ['Tempest', '3x Exalted Orb', 8, 16, 'Powerful Tempests can affect both Monsters and You'],
             ['Warbands', '3x Exalted Orb', 8, 16, 'Area is inhabited by 2 additional Warbands']
         ]
-        # I don't know how to include some of these within the current map tier system, 0,-1,-2 ?
-        # How would they compare in statistics? Not sure about this anymore.
-        # self.fragments = [
-        #     {Map.TimeAdded: 0, Map.Name: 'Sacrifice at Dusk', Map.Tier: 66, Map.Rarity: 'Unique'},
-        #     ['Sacrifice at Dawn', 67],
-        #     ['Sacrifice at Noon', 68],
-        #     ['Sacrifice at Midnight', 69],
-        #     ['Mortal Grief', 70],
-        #     ['Mortal Rage', 71],
-        #     ['Mortal Ignorance', 72],
-        #     ['Mortal Hope', 73]
-        # ]
-        self.atziri_maps = [ #TODO
-            {
-                Map.TimeAdded: 0,
-                Map.Name: 'The Apex of Sacrifice',
-                Map.Tier: 3,
-                Map.IQ: 0,
-                Map.BonusIQ: 0,
-                Map.IR: 0,
-                Map.PackSize: 0,
-                Map.Rarity: 'Unique'
-            },
-            {
-                Map.TimeAdded: 0,
-                Map.Name: 'The Alluring Abyss',
-                Map.Tier: 13,
-                Map.IQ: 200,
-                Map.BonusIQ: 0,
-                Map.IR: 0,
-                Map.PackSize: 0,
-                Map.Rarity: 'Unique',
-                Map.Mod1: '100% Monsters Damage',
-                Map.Mod2: '100% Monsters Life'
-            }
-        ]
-        #self.settings = readSettings()
+        #Windows hwnd
+        self._handle = None
+        self.window = None
         # System Tray Icon
         self.sysTrayIcon = QtWidgets.QSystemTrayIcon()
         self.sysTrayIcon.setIcon(QtGui.QIcon(r'images\\icon.ico'))
@@ -139,7 +116,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         # This will do the Map Watching in a different thread
         self.thread = MapWatcher()
         self.thread.runLoop()
-        self.thread.trigger.connect(self.updateUiMapSelected)  # Triggered when new map found
+        self.thread.trigger.connect(self.newMapFound)  # Triggered when new map found
         # Configure UI
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -173,8 +150,8 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         self.ui.menu_preferences.triggered.connect(self.getPrefs)
         self.ui.menu_about.triggered.connect(self.about)
         # Keyboard Shortcuts
-        QtWidgets.QShortcut(QtGui.QKeySequence("A"), self, self.addMap)
-        QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+U"), self, lambda: self.addMap(True))
+        self.hotkey_add = QtWidgets.QShortcut(QtGui.QKeySequence("A"), self, self.addMap)
+        self.hotkey_addu = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+U"), self, lambda: self.addMap(True))
         QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+D"), self, self.removeMap)
         QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+X"), self, self.clearMap)
         QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+R"), self, self.runMap)
@@ -186,6 +163,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         QtWidgets.QShortcut(QtGui.QKeySequence("F4"), self, self.getPrefs)
         QtWidgets.QShortcut(QtGui.QKeySequence("F5"), self, self.about)
         QtWidgets.QShortcut(QtGui.QKeySequence("F12"), self, self.closeApplication)
+        self.button_access = [False, False, False, False]
         # Setup Map Database
         self.map_data = None
         self.mapDB = MapDatabase(self)
@@ -196,11 +174,8 @@ class MapWatchWindow(QtWidgets.QMainWindow):
             else:
                 self.mapDB.setupDB(self.settings['LastOpenedDB'])
         else:
-            self.buttonAccess(False)
+            self.buttonAccess(self.button_access)
         self.updateWindowTitle()
-        #Windows hwnd
-        self._handle = None
-        self.window = None
 
     def _window_enum_callback(self, hwnd, wildcard):
         '''Pass to win32gui.EnumWindows() to check all the opened windows'''
@@ -218,11 +193,12 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         #self.show()
         self.activateWindow()
         if self._handle:
-            win32gui.ShowWindow(self._handle, win32con.SW_RESTORE)
+            #win32gui.ShowWindow(self._handle, win32con.SW_RESTORE)
             win32gui.BringWindowToTop(self._handle)
-            win32gui.SetWindowPos(self._handle,win32con.HWND_NOTOPMOST, 0, 0, 0, 0, win32con.SWP_NOMOVE + win32con.SWP_NOSIZE)  
-            win32gui.SetWindowPos(self._handle,win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOMOVE + win32con.SWP_NOSIZE)  
-            win32gui.SetWindowPos(self._handle,win32con.HWND_NOTOPMOST, 0, 0, 0, 0, win32con.SWP_SHOWWINDOW + win32con.SWP_NOMOVE + win32con.SWP_NOSIZE)
+            if int(self.settings['AlwaysOnTop']):
+                win32gui.SetWindowPos(self._handle, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_SHOWWINDOW + win32con.SWP_NOMOVE + win32con.SWP_NOSIZE)
+            else:
+                win32gui.SetWindowPos(self._handle, win32con.HWND_NOTOPMOST, 0, 0, 0, 0, win32con.SWP_SHOWWINDOW + win32con.SWP_NOMOVE + win32con.SWP_NOSIZE)
             self.window.SetFocus() #STEAL FOCUS! HAHA, fuck you Microsoft
 
     def giveFocus(self, widget):
@@ -231,17 +207,29 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         elif widget is 'BonusIQ':
             self.ui.mr_add_bonus_iq.setFocus(Qt.ShortcutFocusReason)
 
-    def updateUiMapSelected(self, map_data):
-        print('UI Updated')
+    def newMapFound(self, map_data):
         self.popup()
         self.map_data = map_data
+        self.button_access = [True, True, True, True]
+        if self.thread.map_type is MapType.Fragment:
+            self.button_access[Button.Add] = False
+            self.hotkey_add.setEnabled(False)
+            self.hotkey_addu.setEnabled(False)
+        else:
+            self.hotkey_add.setEnabled(True)
+            self.hotkey_addu.setEnabled(True)
+        self.buttonAccess(self.button_access)
+        self.updateUiMapSelected()
+
+    def updateUiMapSelected(self):
+        print('UI Updated')
         # Clear those items that may not be updated with new map
         self.ui.ms_iq.setText('0%')
         self.ui.ms_ir.setText('0%')
         self.ui.ms_pack_size.setText('0%')
         self.ui.ms_mods.setText('None')
         # Get each piece of map info and update UI lables, etc
-        if Map.TimeAdded in map_data:
+        if Map.TimeAdded in self.map_data:
             h = '%H'
             ms = ''
             p = ''
@@ -250,21 +238,21 @@ class MapWatchWindow(QtWidgets.QMainWindow):
                 p = ' %p'
             if int(self.settings['ShowMilliseconds']):
                 ms = '.%f'
-            time_added = datetime.datetime.fromtimestamp(map_data[Map.TimeAdded]).strftime(h+':%M:%S'+ms+p)
+            time_added = datetime.datetime.fromtimestamp(self.map_data[Map.TimeAdded]).strftime(h+':%M:%S'+ms+p)
             self.ui.ms_time_stamp.setText(time_added)
-        if Map.Name in map_data:
-            self.ui.ms_name.setText(map_data[Map.Name])
-        if Map.Tier in map_data:
-            level = int(map_data[Map.Tier]) + 67
-            self.ui.ms_tier.setText(map_data[Map.Tier] + '  (' + str(level) + ')')
-        if Map.IQ in map_data:
-            self.ui.ms_iq.setText(map_data[Map.IQ]+'%')
-        if Map.IR in map_data:
-            self.ui.ms_ir.setText(map_data[Map.IR]+'%')
-        if Map.PackSize in map_data:
-            self.ui.ms_pack_size.setText(map_data[Map.PackSize]+'%')
-        if Map.Rarity in map_data:
-            rarity = map_data[Map.Rarity]
+        if Map.Name in self.map_data:
+            self.ui.ms_name.setText(self.map_data[Map.Name])
+        if Map.Tier in self.map_data:
+            level = int(self.map_data[Map.Tier]) + 67
+            self.ui.ms_tier.setText(self.map_data[Map.Tier] + '  (' + str(level) + ')')
+        if Map.IQ in self.map_data:
+            self.ui.ms_iq.setText(self.map_data[Map.IQ]+'%')
+        if Map.IR in self.map_data:
+            self.ui.ms_ir.setText(self.map_data[Map.IR]+'%')
+        if Map.PackSize in self.map_data:
+            self.ui.ms_pack_size.setText(self.map_data[Map.PackSize]+'%')
+        if Map.Rarity in self.map_data:
+            rarity = self.map_data[Map.Rarity]
             self.ui.ms_rarity.setText(rarity)
             if rarity == 'Rare':
                 self.ui.ms_name.setStyleSheet("color: rgb(170, 170, 0);")
@@ -274,32 +262,32 @@ class MapWatchWindow(QtWidgets.QMainWindow):
                 self.ui.ms_name.setStyleSheet("color: rgb(170, 85, 0);")
             else:
                 self.ui.ms_name.setStyleSheet("color: rgb(0, 0, 0);")
-        if Map.Mod1 in map_data:
-            all_mods = map_data[Map.Mod1]
+        if Map.Mod1 in self.map_data:
+            all_mods = self.map_data[Map.Mod1]
             self.ui.ms_mods.setText(all_mods)
-        if Map.Mod2 in map_data:
-            all_mods = all_mods + '\r\n' + map_data[Map.Mod2]
+        if Map.Mod2 in self.map_data:
+            all_mods = all_mods + '\r\n' + self.map_data[Map.Mod2]
             self.ui.ms_mods.setText(all_mods)
-        if Map.Mod3 in map_data:
-            all_mods = all_mods + '\r\n' + map_data[Map.Mod3]
+        if Map.Mod3 in self.map_data:
+            all_mods = all_mods + '\r\n' + self.map_data[Map.Mod3]
             self.ui.ms_mods.setText(all_mods)
-        if Map.Mod4 in map_data:
-            all_mods = all_mods + '\r\n' + map_data[Map.Mod4]
+        if Map.Mod4 in self.map_data:
+            all_mods = all_mods + '\r\n' + self.map_data[Map.Mod4]
             self.ui.ms_mods.setText(all_mods)
-        if Map.Mod5 in map_data:
-            all_mods = all_mods + '\r\n' + map_data[Map.Mod5]
+        if Map.Mod5 in self.map_data:
+            all_mods = all_mods + '\r\n' + self.map_data[Map.Mod5]
             self.ui.ms_mods.setText(all_mods)
-        if Map.Mod6 in map_data:
-            all_mods = all_mods + '\r\n' + map_data[Map.Mod6]
+        if Map.Mod6 in self.map_data:
+            all_mods = all_mods + '\r\n' + self.map_data[Map.Mod6]
             self.ui.ms_mods.setText(all_mods)
-        if Map.Mod7 in map_data:
-            all_mods = all_mods + '\r\n' + map_data[Map.Mod7]
+        if Map.Mod7 in self.map_data:
+            all_mods = all_mods + '\r\n' + self.map_data[Map.Mod7]
             self.ui.ms_mods.setText(all_mods)
-        if Map.Mod8 in map_data:
-            all_mods = all_mods + '\r\n' + map_data[Map.Mod8]
+        if Map.Mod8 in self.map_data:
+            all_mods = all_mods + '\r\n' + self.map_data[Map.Mod8]
             self.ui.ms_mods.setText(all_mods)
-        if Map.Mod9 in map_data:
-            all_mods = all_mods + '\r\n' + map_data[Map.Mod9]
+        if Map.Mod9 in self.map_data:
+            all_mods = all_mods + '\r\n' + self.map_data[Map.Mod9]
             self.ui.ms_mods.setText(all_mods)
 
     def updateUiMapRunning(self, clear=False):
@@ -403,7 +391,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
                 if not new:
                     self.mapDB.setupDB('Checking DB Structure', True)
                 self.updateWindowTitle()
-                self.buttonAccess(True)
+                self.buttonAccess([True, True, True, True])
                 self.settings['LastOpenedDB'] = file_name[0]
                 writeSettings(self.settings)
 
@@ -456,6 +444,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
 
     def setPrefs(self):
         self.settings = readSettings()
+        self.popup()
         self.thread.setMapCheckInterval(float(self.settings['MapCheckInterval']))
         self.changeZanaLevel()
         hour12 = self.settings['ClockHour12']
@@ -477,16 +466,16 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         else:
             self.setWindowTitle(self.appTitle + ' ---> Map Database Not Loaded')
 
-    def buttonAccess(self, disable):
-        self.ui.ms_add_map.setEnabled(disable)
-        self.ui.ms_remove_map.setEnabled(disable)
-        self.ui.mr_clear_map.setEnabled(disable)
-        self.ui.mr_run_map.setEnabled(disable)
-        self.ui.menu_ms_add_map.setEnabled(disable)
-        self.ui.menu_ms_add_unlinked_map.setEnabled(disable)
-        self.ui.menu_ms_remove_map.setEnabled(disable)
-        self.ui.menu_mr_clear_map.setEnabled(disable)
-        self.ui.menu_mr_run_map.setEnabled(disable)
+    def buttonAccess(self, button):
+        self.ui.ms_add_map.setEnabled(button[Button.Add])
+        self.ui.ms_remove_map.setEnabled(button[Button.Remove])
+        self.ui.mr_clear_map.setEnabled(button[Button.Clear])
+        self.ui.mr_run_map.setEnabled(button[Button.Run])
+        self.ui.menu_ms_add_map.setEnabled(button[Button.Add])
+        self.ui.menu_ms_add_unlinked_map.setEnabled(button[Button.Add])
+        self.ui.menu_ms_remove_map.setEnabled(button[Button.Remove])
+        self.ui.menu_mr_clear_map.setEnabled(button[Button.Clear])
+        self.ui.menu_mr_run_map.setEnabled(button[Button.Run])
 
     def error(self, err_msg, errors=None):
         err_msg += '\n'
@@ -521,7 +510,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
 
 
 class ConfirmDialog(QtWidgets.QDialog):
-    
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.ui = Ui_Confirm()
@@ -570,7 +559,7 @@ class ConfirmDialog(QtWidgets.QDialog):
 
 
 class Preferences(QtWidgets.QDialog):
-    
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent = parent
@@ -646,10 +635,48 @@ class MapWatcher(QThread):
         QThread.__init__(self, parent)
         self.exiting = False
         self.check_interval = 2.0
+        self.map_type = MapType.Standard
+        # I don't know how to include some of these within the current map tier system, 0,-1,-2 ?
+        # How would they compare in statistics? Not sure about this anymore.
+        # self.fragments = [
+        #     {Map.TimeAdded: 0, Map.Name: 'Sacrifice at Dusk', Map.Tier: 66, Map.Rarity: 'Unique'},
+        #     ['Sacrifice at Dawn', 67],
+        #     ['Sacrifice at Noon', 68],
+        #     ['Sacrifice at Midnight', 69],
+        #     ['Mortal Grief', 70],
+        #     ['Mortal Rage', 71],
+        #     ['Mortal Ignorance', 72],
+        #     ['Mortal Hope', 73]
+        # ]
+        self.atziri_maps = [
+            {
+                Map.TimeAdded: 0,
+                Map.Name: 'The Apex of Sacrifice',
+                Map.Tier: '3',
+                Map.IQ: '0',
+                Map.BonusIQ: '0',
+                Map.IR: '0',
+                Map.PackSize: '0',
+                Map.Rarity: 'Unique'
+            },
+            {
+                Map.TimeAdded: 0,
+                Map.Name: 'The Alluring Abyss',
+                Map.Tier: '13',
+                Map.IQ: '200',
+                Map.BonusIQ: '0',
+                Map.IR: '0',
+                Map.PackSize: '0',
+                Map.Rarity: 'Unique',
+                Map.Mod1: '100% Monsters Damage',
+                Map.Mod2: '100% Monsters Life'
+            }
+        ]
 
     def __del__(self):
         self.exiting = True
         self.wait()
+        super().__del__(self)
 
     def runLoop(self):
         self.start()
@@ -657,54 +684,67 @@ class MapWatcher(QThread):
     def setMapCheckInterval(self, seconds):
         self.check_interval = seconds
 
-    def parseMapData(self, copied_str):
-        map_rarity =    re.search(r'Rarity:\s(\w*)\n', copied_str)
-        map_name1 =     re.search(r'Rarity:\s\w*\n(.*)\n', copied_str)
-        map_name2 =     re.search(r'Rarity:\s\w*\n.*\n([^-].*)\n', copied_str)
-        map_tier =      re.search(r'Map\sTier:\s(\d*)\s', copied_str)
-        map_iq =        re.search(r'Item\sQuantity:\s\+(\d*)\%.*\n', copied_str)
-        map_ir =        re.search(r'Item\sRarity:\s\+(\d*)\%.*\n', copied_str)
-        map_pack_size = re.search(r'Monster\sPack\sSize:\s\+(\d*)\%.*\n', copied_str)
-        map_mods = []
-        pattern = re.compile(r'Item\sLevel:\s\d*\n--------\n(.*)', re.DOTALL)
-        remaining_data = re.search(pattern, copied_str)
-        if remaining_data:
-            map_mods = remaining_data.group(1).split('\n')
+    def parseMapData(self, copied_str, fragment=False):
         map_data = {}
-        map_data[Map.TimeAdded] = time.time()
-        if map_rarity:
-            print('Rarity: ' + map_rarity.group(1))
-            map_data[Map.Rarity] = map_rarity.group(1)
-        if map_name1 and map_name2:
-            print('Map Name: ' + map_name1.group(1) + ' ' + map_name2.group(1))
-            map_data[Map.Name] = map_name1.group(1) + ' ' + map_name2.group(1)
-        elif map_name1:
-            print('Map Name: ' + map_name1.group(1))
-            map_data[Map.Name] = map_name1.group(1)
-        if map_tier:
-            print('Map Tier: ' + map_tier.group(1))
-            map_data[Map.Tier] = map_tier.group(1)
-        if map_iq:
-            print('Map Item Quantity: ' + map_iq.group(1))
-            map_data[Map.IQ] = map_iq.group(1)
-        if map_ir:
-            print('Map Item Rarity: ' + map_ir.group(1))
-            map_data[Map.IR] = map_ir.group(1)
-        if map_pack_size:
-            print('Monster Pack Size: ' + map_pack_size.group(1))
-            map_data[Map.PackSize] = map_pack_size.group(1)
-        for i, mod in enumerate(map_mods):
-            print('Map Mod ' + str(i+1) +': ' + mod)
-            map_data[Map.Mod1 + i] = mod
-            # Unidentified maps add 30% bonus IQ
-            if mod == 'Unidentified':
-                map_data[Map.IQ] = '30'
+        map_rarity = re.search(r'Rarity:\s(\w*)\n', copied_str)
+        map_name1 = re.search(r'Rarity:\s\w*\n(.*)\n', copied_str)
+        if fragment:
+            if re.match(r'Sacrifice\sat', map_name1.group(1)):
+                map_data = self.atziri_maps[0]
+            else:
+                map_data = self.atziri_maps[1]
+            if re.match(r'Sacrifice\sat\sMidnight', map_name1.group(1)) or re.match(r'Mortal\sHope', map_name1.group(1)):
+                self.map_type = MapType.RareFragment
+            else:
+                self.map_type = MapType.Fragment
+            map_data[Map.TimeAdded] = time.time()
+        else:
+            self.map_type = MapType.Standard
+            map_name2 = re.search(r'Rarity:\s\w*\n.*\n([^-].*)\n', copied_str)
+            map_tier = re.search(r'Map\sTier:\s(\d*)\s', copied_str)
+            map_iq = re.search(r'Item\sQuantity:\s\+(\d*)\%.*\n', copied_str)
+            map_ir = re.search(r'Item\sRarity:\s\+(\d*)\%.*\n', copied_str)
+            map_pack_size = re.search(r'Monster\sPack\sSize:\s\+(\d*)\%.*\n', copied_str)
+            map_mods = []
+            pattern = re.compile(r'Item\sLevel:\s\d*\n--------\n(.*)', re.DOTALL)
+            remaining_data = re.search(pattern, copied_str)
+            if remaining_data:
+                map_mods = remaining_data.group(1).split('\n')
+            map_data[Map.TimeAdded] = time.time()
+            if map_rarity:
+                print('Rarity: ' + map_rarity.group(1))
+                map_data[Map.Rarity] = map_rarity.group(1)
+            if map_name1 and map_name2:
+                print('Map Name: ' + map_name1.group(1) + ' ' + map_name2.group(1))
+                map_data[Map.Name] = map_name1.group(1) + ' ' + map_name2.group(1)
+            elif map_name1:
+                print('Map Name: ' + map_name1.group(1))
+                map_data[Map.Name] = map_name1.group(1)
+            if map_tier:
+                print('Map Tier: ' + map_tier.group(1))
+                map_data[Map.Tier] = map_tier.group(1)
+            if map_iq:
+                print('Map Item Quantity: ' + map_iq.group(1))
+                map_data[Map.IQ] = map_iq.group(1)
+            if map_ir:
+                print('Map Item Rarity: ' + map_ir.group(1))
+                map_data[Map.IR] = map_ir.group(1)
+            if map_pack_size:
+                print('Monster Pack Size: ' + map_pack_size.group(1))
+                map_data[Map.PackSize] = map_pack_size.group(1)
+            for i, mod in enumerate(map_mods):
+                print('Map Mod ' + str(i+1) +': ' + mod)
+                map_data[Map.Mod1 + i] = mod
+                # Unidentified maps add 30% bonus IQ
+                if mod == 'Unidentified':
+                    map_data[Map.IQ] = '30'
         # Send signal to Update UI
         self.trigger.emit(map_data)
 
     # Note: This is never called directly. It is called by Qt once the thread environment has been set up.
     def run(self):
         map_check_str = r'\r?\n--------\r?\nTravel to this Map by using it in the Eternal Laboratory or a personal Map Device\. Maps can only be used once\.'
+        fragment_check_str = r'\r?\n--------\r?\nCan be used in the Eternal Laboratory or a personal Map Device\.'
         while not self.exiting:
             copied_data = pyperclip.paste()
             if copied_data:
@@ -727,6 +767,14 @@ class MapWatcher(QThread):
                         print('Trimming \\n')
                         copied_data = copied_data[:-1]
                     self.parseMapData(copied_data)
+                elif re.search(fragment_check_str, copied_data) and not re.search(r'Map Watch Time Stamp:', copied_data):
+                    print('====Found a Fragment====')
+                    # Add time stamp to every fragment found
+                    time_stamp = '========\r\nMap Watch Time Stamp: ' + str(time.time()) + '\r\n========\r\n'
+                    pyperclip.copy(time_stamp + copied_data)
+                    # Remove all Windows specific carriage returns (\r)
+                    copied_data = copied_data.replace('\r', '')
+                    self.parseMapData(copied_data, True)
             time.sleep(self.check_interval)
 
 
