@@ -3,7 +3,6 @@ import os
 import re
 import copy
 import json
-#import msvcrt
 import sqlite3
 import time
 import datetime
@@ -82,17 +81,17 @@ class MapWatchWindow(QtWidgets.QMainWindow):
             ['None', 'Free', 0, 0, ''],
             ['Item Quantity', 'Free', 1, 0, '+1% Quantity Per Master Level'],
             ['Rampage', '4x Chaos Orbs', 2, 0, 'Slaying enemies quickly grants Rampage bonuses'],
-            ['Bloodlines', '4x Chaos Orb', 2, 15, 'Magic Monster Packs each have a Bloodline Mod'],
-            ['Anarchy', '8x Chaos Orb', 3, 16, 'Area is inhabited by 4 additional Rogue Exiles'],
-            ['Invasion', '8x Chaos Orb', 3, 16, 'Area is inhabited by 3 additional Invasion Bosses'],
-            ['Domination', '10x Chaos Orb', 4, 0, 'Area Contains 5 Extra Shrines'],
-            ['Onslaught', '8x Chaos Orb', 4, 30, '40% Increased Monster Cast & Attack Speed'],
-            ['Torment', '8x Chaos Orb', 5, 12, 'Area spawns 3 extra Tormented Spirits (Stacks with any that naturally spawned)'],
-            ['Beyond', '12x Chaos Orb', 5, 8, 'Slaying enemies close together can attract monsters from Beyond this realm'],
-            ['Ambush', '12x Chaos Orb', 6, 0, 'Area contains 4 extra Strongboxes'],
+            ['Bloodlines', '4x Chaos Orbs', 2, 15, 'Magic Monster Packs each have a Bloodline Mod'],
+            ['Anarchy', '8x Chaos Orbs', 3, 16, 'Area is inhabited by 4 additional Rogue Exiles'],
+            ['Invasion', '8x Chaos Orbs', 3, 16, 'Area is inhabited by 3 additional Invasion Bosses'],
+            ['Domination', '10x Chaos Orbs', 4, 0, 'Area Contains 5 Extra Shrines'],
+            ['Onslaught', '8x Chaos Orbs', 4, 30, '40% Increased Monster Cast & Attack Speed'],
+            ['Torment', '8x Chaos Orbs', 5, 12, 'Area spawns 3 extra Tormented Spirits (Stacks with any that naturally spawned)'],
+            ['Beyond', '12x Chaos Orbs', 5, 8, 'Slaying enemies close together can attract monsters from Beyond this realm'],
+            ['Ambush', '12x Chaos Orbs', 6, 0, 'Area contains 4 extra Strongboxes'],
             ['Nemesis', '1x Exalted Orb', 7, 0, 'One Rare Per Pack, Rare Monsters Each Have A Nemesis Mod'],
-            ['Tempest', '3x Exalted Orb', 8, 16, 'Powerful Tempests can affect both Monsters and You'],
-            ['Warbands', '3x Exalted Orb', 8, 16, 'Area is inhabited by 2 additional Warbands']
+            ['Tempest', '3x Exalted Orbs', 8, 16, 'Powerful Tempests can affect both Monsters and You'],
+            ['Warbands', '3x Exalted Orbs', 8, 16, 'Area is inhabited by 2 additional Warbands']
         ]
         #Windows hwnd
         self._handle = None
@@ -117,6 +116,9 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         self.thread = MapWatcher()
         self.thread.runLoop()
         self.thread.trigger.connect(self.newMapFound)  # Triggered when new map found
+        # Setup Map Database
+        self.map_data = None
+        self.mapDB = MapDatabase(self)
         # Configure UI
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -129,7 +131,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         if not int(self.settings['AlwaysOnTop']):
             self.setWindowFlags(Qt.CustomizeWindowHint|Qt.WindowCloseButtonHint|Qt.X11BypassWindowManagerHint)
         else:
-            self.setWindowFlags(Qt.CustomizeWindowHint|Qt.WindowCloseButtonHint|Qt.WindowStaysOnTopHint|Qt.X11BypassWindowManagerHint)  
+            self.setWindowFlags(Qt.CustomizeWindowHint|Qt.WindowCloseButtonHint|Qt.WindowStaysOnTopHint|Qt.X11BypassWindowManagerHint)
         # Button Actions
         self.ui.ms_add_map.clicked.connect(self.addMap)
         self.ui.ms_remove_map.clicked.connect(self.removeMap)
@@ -157,6 +159,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+R"), self, self.runMap)
         QtWidgets.QShortcut(QtGui.QKeySequence("Z"), self, lambda: self.giveFocus('ZanaMod'))
         QtWidgets.QShortcut(QtGui.QKeySequence("Q"), self, lambda: self.giveFocus('BonusIQ'))
+        QtWidgets.QShortcut(QtGui.QKeySequence("M"), self, self.minimizeToSysTray)
         QtWidgets.QShortcut(QtGui.QKeySequence("F1"), self, lambda: self.setDBFile(True))
         QtWidgets.QShortcut(QtGui.QKeySequence("F2"), self, self.setDBFile)
         QtWidgets.QShortcut(QtGui.QKeySequence("F3"), self, self.openStatFile)
@@ -164,9 +167,6 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         QtWidgets.QShortcut(QtGui.QKeySequence("F5"), self, self.about)
         QtWidgets.QShortcut(QtGui.QKeySequence("F12"), self, self.closeApplication)
         self.button_access = [False, False, False, False]
-        # Setup Map Database
-        self.map_data = None
-        self.mapDB = MapDatabase(self)
         if int(self.settings['LoadLastOpenedDB']):
             if os.path.exists(self.settings['LastOpenedDB']):
                 self.mapDB.setDBFile(self.settings['LastOpenedDB'])
@@ -179,7 +179,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
 
     def _window_enum_callback(self, hwnd, wildcard):
         '''Pass to win32gui.EnumWindows() to check all the opened windows'''
-        if re.match(wildcard, str(win32gui.GetWindowText(hwnd))) != None:
+        if re.match(wildcard, str(win32gui.GetWindowText(hwnd))) is not None:
             self._handle = hwnd
             print('hwnd: '+str(self._handle))
         #print(str(win32gui.GetWindowText(hwnd)))
@@ -189,6 +189,11 @@ class MapWatchWindow(QtWidgets.QMainWindow):
             self.popup()
 
     def popup(self):
+        self.button_access = [True, True, True, True]
+        if self.thread.map_type is MapType.Fragment:
+            self.button_access[Button.Add] = False
+        if self.mapDB.db_file:
+            self.buttonAccess(self.button_access)
         self.showNormal()
         #self.show()
         self.activateWindow()
@@ -198,8 +203,9 @@ class MapWatchWindow(QtWidgets.QMainWindow):
             if int(self.settings['AlwaysOnTop']):
                 win32gui.SetWindowPos(self._handle, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_SHOWWINDOW + win32con.SWP_NOMOVE + win32con.SWP_NOSIZE)
             else:
+                win32gui.SetWindowPos(self._handle, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_SHOWWINDOW + win32con.SWP_NOMOVE + win32con.SWP_NOSIZE)
                 win32gui.SetWindowPos(self._handle, win32con.HWND_NOTOPMOST, 0, 0, 0, 0, win32con.SWP_SHOWWINDOW + win32con.SWP_NOMOVE + win32con.SWP_NOSIZE)
-            self.window.SetFocus() #STEAL FOCUS! HAHA, fuck you Microsoft
+            self.window.SetFocus() #STEALFOCUS
 
     def giveFocus(self, widget):
         if widget is 'ZanaMod':
@@ -210,15 +216,6 @@ class MapWatchWindow(QtWidgets.QMainWindow):
     def newMapFound(self, map_data):
         self.popup()
         self.map_data = map_data
-        self.button_access = [True, True, True, True]
-        if self.thread.map_type is MapType.Fragment:
-            self.button_access[Button.Add] = False
-            self.hotkey_add.setEnabled(False)
-            self.hotkey_addu.setEnabled(False)
-        else:
-            self.hotkey_add.setEnabled(True)
-            self.hotkey_addu.setEnabled(True)
-        self.buttonAccess(self.button_access)
         self.updateUiMapSelected()
 
     def updateUiMapSelected(self):
@@ -374,7 +371,18 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         print('Running Selected Map')
         if self.mapDB.runMap(self.map_data):
             self.updateUiMapRunning()
+            self.mapDB.map_type_running = self.thread.map_type
             self.resetBonuses()
+            if Map.Mod1 in self.mapDB.map_running and self.mapDB.map_running[Map.Mod1] == 'Unidentified':
+                self.ui.mr_add_bonus_iq.setMaximum(200)
+                self.ui.mr_add_bonus_iq.setSingleStep(1)
+            else:
+                self.ui.mr_add_bonus_iq.setMaximum(15)
+                self.ui.mr_add_bonus_iq.setSingleStep(5)
+            if self.mapDB.map_type_running == MapType.Fragment or self.mapDB.map_type_running == MapType.RareFragment:
+                self.ui.mr_add_bonus_iq.setEnabled(False)
+            else:
+                self.ui.mr_add_bonus_iq.setEnabled(True)
 
     def setDBFile(self, new=False):
         if self.clearMap():
@@ -391,7 +399,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
                 if not new:
                     self.mapDB.setupDB('Checking DB Structure', True)
                 self.updateWindowTitle()
-                self.buttonAccess([True, True, True, True])
+                self.popup()
                 self.settings['LastOpenedDB'] = file_name[0]
                 writeSettings(self.settings)
 
@@ -476,6 +484,8 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         self.ui.menu_ms_remove_map.setEnabled(button[Button.Remove])
         self.ui.menu_mr_clear_map.setEnabled(button[Button.Clear])
         self.ui.menu_mr_run_map.setEnabled(button[Button.Run])
+        self.hotkey_add.setEnabled(button[Button.Add])
+        self.hotkey_addu.setEnabled(button[Button.Add])
 
     def error(self, err_msg, errors=None):
         err_msg += '\n'
@@ -653,10 +663,6 @@ class MapWatcher(QThread):
                 Map.TimeAdded: 0,
                 Map.Name: 'The Apex of Sacrifice',
                 Map.Tier: '3',
-                Map.IQ: '0',
-                Map.BonusIQ: '0',
-                Map.IR: '0',
-                Map.PackSize: '0',
                 Map.Rarity: 'Unique'
             },
             {
@@ -664,9 +670,6 @@ class MapWatcher(QThread):
                 Map.Name: 'The Alluring Abyss',
                 Map.Tier: '13',
                 Map.IQ: '200',
-                Map.BonusIQ: '0',
-                Map.IR: '0',
-                Map.PackSize: '0',
                 Map.Rarity: 'Unique',
                 Map.Mod1: '100% Monsters Damage',
                 Map.Mod2: '100% Monsters Life'
@@ -779,7 +782,7 @@ class MapWatcher(QThread):
 
 
 class MapDatabase(object):
-    
+
     def __init__(self, parent=None):
         self.parent = parent
         self.table_names = ['Maps_Dropped','Maps_Ran']
@@ -787,6 +790,7 @@ class MapDatabase(object):
         self.column_names = [['Name','Tier','IQ','IR','Pack_Size','Rarity','Mod1','Mod2','Mod3','Mod4','Mod5','Mod6','Mod7','Mod8','Mod9','Dropped_In_ID'],
                             ['Name','Tier','IQ','Bonus_IQ','IR','Pack_Size','Rarity','Mod1','Mod2','Mod3','Mod4','Mod5','Mod6','Mod7','Mod8','Mod9','Time_Cleared']]
         self.map_running = None
+        self.map_type_running = MapType.Standard
         self.db_file = None
         print('MapDatabase loaded')
 
