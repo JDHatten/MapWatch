@@ -47,6 +47,20 @@ window.onload = function () {
 	if (window.File && window.FileReader && window.FileList && window.Blob) {
 		var fileSelected = document.getElementById('db_load_btn');
 		fileSelected.addEventListener('change', function (e) {
+			var body = document.body;
+			var loading_div = document.createElement("div");
+			loading_div.setAttribute("id", "loading_div");
+			body.appendChild(loading_div);
+			
+			var loading_bg = document.createElement("div");
+			loading_bg.setAttribute("id", "loading_bg");
+			loading_div.appendChild(loading_bg);
+
+			var loading_text = document.createElement("div");
+			loading_text.setAttribute("id", "loading_text");
+			loading_text.innerHTML = "Loading...";
+			loading_div.appendChild(loading_text);
+
 			//Get the file object 
 			var fileTobeRead = fileSelected.files[0];
 			var r = new FileReader();
@@ -61,7 +75,7 @@ window.onload = function () {
 	} else { 
 		alert("File loading is not supported in this old browser you got here, sorry."); 
 	}
-	$("#tab6").addClass("tabs");
+	$('#tab6').addClass('tabs');
 	activate_tab(1);
 	$('#tab_link1').click(function(){ activate_tab(1); return false; });
 	$('#tab_link2').click(function(){ activate_tab(2); return false; });
@@ -113,12 +127,12 @@ function activate_tab(num) {
 }
 
 function getData(db) {
-	$("#tab1").removeClass("tabs");
-	$("#tab2").removeClass("tabs");
-	$("#tab3").removeClass("tabs");
-    $("#tab4").removeClass("tabs");
-    $("#tab5").removeClass("tabs");
-	$("#tab6").removeClass("tabs");
+	$('#tab1').removeClass('tabs');
+	$('#tab2').removeClass('tabs');
+	$('#tab3').removeClass('tabs');
+    $('#tab4').removeClass('tabs');
+    $('#tab5').removeClass('tabs');
+	$('#tab6').removeClass('tabs');
 
     // Search 'Gen Stat'
 	all_gen_stats = [
@@ -143,8 +157,8 @@ function getData(db) {
 	var maps_dropped = db.prepare("SELECT Dropped_In_ID, Tier FROM Maps_Dropped WHERE Dropped_In_ID > 0");
 	var maps_ran = db.prepare("SELECT Time_Stamp_ID, Tier FROM Maps_Ran");
 	var map_returns = [['Map Tier', '-2 or Lower Returns', '-1 Returns', 'Even Returns', '+1 Returns', '+2 Returns', 'Overall Gain']];
-	var i = 0;
-	var t = 0;
+	var _i = 0;
+	var _t = 0;
 	var same_tier = false;
 	var tier_count = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]; // used for averaging (20 tiers? cuz reasons, what's with the questions? are you a cop? you know you have to tell me if you're a cop.)
 	while (maps_ran.step()) {
@@ -155,20 +169,20 @@ function getData(db) {
 		//var tier_index = map_returns.map((el) => el[0]).indexOf(map_tier); // Note: doesn't work in IE10 and below
 		var tier_index = map_returns.map(function (element) {return element[0];}).indexOf(map_tier);
 		tier_count[+map_tier - 1] += 1;
-		// If tier already added, save index (t) then update an already added tier
+		// If tier already added, save index (_t) then update an already added tier
 		if (tier_index > -1) {
-			if (!same_tier) t = i;
-			i = tier_index;
+			if (!same_tier) _t = _i;
+			_i = tier_index;
 			same_tier = true;
-		} else if (i <= t) {
+		} else if (_i <= _t) {
 			same_tier = false;
-			i = t;
-			i += 1;
-			map_returns[i] = [map_tier,0,0,0,0,0,0];
+			_i = _t;
+			_i += 1;
+			map_returns[_i] = [map_tier,0,0,0,0,0,0];
 		} else {
 			same_tier = false;
-			i += 1;
-			map_returns[i] = [map_tier,0,0,0,0,0,0];
+			_i += 1;
+			map_returns[_i] = [map_tier,0,0,0,0,0,0];
 		}
 		while (maps_dropped.step()) {
 			if (map_ran == maps_dropped.getAsObject()['Dropped_In_ID']) {
@@ -181,29 +195,29 @@ function getData(db) {
 					case 4:
 					case 3:// Note: just for testing faked data, these ^numbers are not posible drops in game
 					case 2:
-					map_returns[i][5] += 1;
+					map_returns[_i][5] += 1;
 					overall_gain += 3;
 					break;
 					case 1:
-					map_returns[i][4] += 1;
+					map_returns[_i][4] += 1;
 					overall_gain += 2;
 					break;
 					case 0:
-					map_returns[i][3] += 1;
+					map_returns[_i][3] += 1;
 					overall_gain += 1;
 					break;
 					case -1:
-					map_returns[i][2] += 1;
+					map_returns[_i][2] += 1;
 					overall_gain += 1/3;
 					break;
 					default:
-					map_returns[i][1] += 1;
+					map_returns[_i][1] += 1;
 					overall_gain += 1/9; // TODO: this is not really accurate since its -2 or lower
 					break;
 				}
 			}
 		}
-		map_returns[i][6] += Math.round(overall_gain * 10) / 10;
+		map_returns[_i][6] += Math.round(overall_gain * 10) / 10;
 	}
 	// Sorted Ascending (thought the first index which are words would throw this off but it works fine)
 	map_returns.sort(function(a, b) {
@@ -257,108 +271,109 @@ function getData(db) {
 	allMapDrops(all_drops);
 
 	/**********
-	* Get all map data to be placed into a table.  Raw Map Data!
+	* Get all map data to be placed into a table.  All Map Data!
 	******/
-	var maps_dropped = db.prepare("SELECT * FROM Maps_Dropped WHERE Dropped_In_ID > 0");
+	var maps_dropped_all = db.prepare("SELECT * FROM Maps_Dropped WHERE Dropped_In_ID > 0");
 	var maps_dropped_unlinked = db.prepare("SELECT * FROM Maps_Dropped WHERE Dropped_In_ID IS NULL OR Dropped_In_ID = ''");
-	var maps_ran = db.prepare("SELECT * FROM Maps_Ran");
+	var maps_ran_all = db.prepare("SELECT * FROM Maps_Ran");
 	all_maps_ran = [];
 	all_maps_dropped = [];
-	var i = 0;
-	while (maps_ran.step()) {
-		all_maps_ran.push([i]);
+	var _i = 0;
+	while (maps_ran_all.step()) {
+		all_maps_ran.push([_i]);
 		all_maps_dropped.push([]); // Adding new array that will later be filled with map drops for that map ran.
-		//console.log("my object: %o", maps_ran.getAsObject())
-		var map = maps_ran.getAsObject();
+		//console.log("my object: %o", maps_ran_all.getAsObject())
+		var map = maps_ran_all.getAsObject();
 		Object.keys(map).forEach(function(key) {
 			var val = (map[key]) ? map[key] : '';
 			// Compressing Map Mods into 2 columns
 			if (key == 'Mod1') {
-				all_maps_ran[i].push(val);
+				all_maps_ran[_i].push(val);
 			}
 			else if (['Mod2','Mod3','Mod4'].indexOf(key) > -1) {
 				if (val)
-					all_maps_ran[i][9] += '<br>'+val;
+					all_maps_ran[_i][9] += '<br>'+val;
 			}
 			else if (key == 'Mod5') {
-				all_maps_ran[i].push(val);
+				all_maps_ran[_i].push(val);
 			}
 			else if (['Mod6','Mod7','Mod8','Mod9'].indexOf(key) > -1) {
 				if (val)
-					all_maps_ran[i][10] += '<br>'+val;
+					all_maps_ran[_i][10] += '<br>'+val;
 			}
 			else {
-				all_maps_ran[i].push(val);
+				all_maps_ran[_i].push(val);
 			}
 		});
-		i++;
+		_i++;
 	}
-	all_maps_ran.push([i,"Unlinked Map Drops","","","","","","","","","",""]);
+	all_maps_ran.push([_i,"Unlinked Map Drops","","","","","","","","","",""]);
 	console.log(all_maps_ran);
 	console.log('^^^');
-	var n = 0;
-	var m = 0;
-	while (maps_dropped.step()) {
-		var map = maps_dropped.getAsObject();
+	var _n = 0;
+	var _m = 0;
+	while (maps_dropped_all.step()) {
+		var map = maps_dropped_all.getAsObject();
 		// This loops until it finds the corect map ran for this map drop, because some maps ran might not have any map drops at all
-		while (map['Dropped_In_ID'] != all_maps_ran[n][1]) {
-			n++;
-			m = 0;
+		while (map['Dropped_In_ID'] != all_maps_ran[_n][1]) {
+			_n++;
+			_m = 0;
 		}
-		all_maps_dropped[n].push([]);
+		all_maps_dropped[_n].push([]);
 		Object.keys(map).forEach(function(key) {
 			var val = (map[key]) ? map[key] : '';
 			// Compressing Map Mods into 2 columns
 			if (key == 'Mod1') {
-				all_maps_dropped[n][m].push(val);
+				all_maps_dropped[_n][_m].push(val);
 			}
 			else if (['Mod2','Mod3','Mod4'].indexOf(key) > -1) {
 				if (val)
-					all_maps_dropped[n][m][7] += '<br>'+val;
+					all_maps_dropped[_n][_m][7] += '<br>'+val;
 			}
 			else if (key == 'Mod5') {
-				all_maps_dropped[n][m].push(val);
+				all_maps_dropped[_n][_m].push(val);
 			}
 			else if (['Mod6','Mod7','Mod8','Mod9'].indexOf(key) > -1) {
 				if (val)
-					all_maps_dropped[n][m][8] += '<br>'+val;
+					all_maps_dropped[_n][_m][8] += '<br>'+val;
 			}
 			else {
-				all_maps_dropped[n][m].push(val);
+				all_maps_dropped[_n][_m].push(val);
 			}
 		});
-		m++;
+		_m++;
 	}
-	n = all_maps_ran.length - 1; // Last map index is a place holder for Unlinked Map Drops, start there.
-	m = 0;
-	all_maps_dropped.push([])
+	_n = all_maps_ran.length - 1; // Last map index is a place holder for Unlinked Map Drops, start there.
+	_m = 0;
+	all_maps_dropped.push([]);
 	while (maps_dropped_unlinked.step()) {
 		var map = maps_dropped_unlinked.getAsObject();
-		all_maps_dropped[n].push([]);
+		all_maps_dropped[_n].push([]);
 		Object.keys(map).forEach(function(key) {
 			var val = (map[key]) ? map[key] : '';
 			// Compressing Map Mods into 2 columns
 			if (key == 'Mod1') {
-				all_maps_dropped[n][m].push(val);
+				all_maps_dropped[_n][_m].push(val);
 			}
 			else if (['Mod2','Mod3','Mod4'].indexOf(key) > -1) {
 				if (val)
-					all_maps_dropped[n][m][7] += '<br>'+val;
+					all_maps_dropped[_n][_m][7] += '<br>'+val;
 			}
 			else if (key == 'Mod5') {
-				all_maps_dropped[n][m].push(val);
+				all_maps_dropped[_n][_m].push(val);
 			}
 			else if (['Mod6','Mod7','Mod8','Mod9'].indexOf(key) > -1) {
 				if (val)
-					all_maps_dropped[n][m][8] += '<br>'+val;
+					all_maps_dropped[_n][_m][8] += '<br>'+val;
 			}
 			else {
-				all_maps_dropped[n][m].push(val);
+				all_maps_dropped[_n][_m].push(val);
 			}
 		});
-		m++;
+		_m++;
 	}
 	console.log(all_maps_dropped);
+	console.log(maps_dropped);
 	allMapDataTable(all_maps_ran, all_maps_dropped);
 
 	/**********
@@ -561,12 +576,15 @@ function getData(db) {
     
     gerealStatTable(all_gen_stats);
 
-	$("#tab1").addClass("tabs");
-	$("#tab2").addClass("tabs");
-	$("#tab3").addClass("tabs");
-    $("#tab4").addClass("tabs");
-    $("#tab5").addClass("tabs");
-	$("#tab6").addClass("tabs");
+	$('#tab1').addClass('tabs');
+	$('#tab2').addClass('tabs');
+	$('#tab3').addClass('tabs');
+    $('#tab4').addClass('tabs');
+    $('#tab5').addClass('tabs');
+	$('#tab6').addClass('tabs');
+
+	var loading_div = document.getElementById("loading_div");
+	document.body.removeChild(loading_div);
 }
 
 // https://google-developers.appspot.com/chart/
@@ -576,7 +594,7 @@ function avgMapReturns(data) {
 		tab2.removeChild(tab2.firstChild);
 	}
 	var hr = document.createElement("hr");
-	document.getElementById("tab2").appendChild(hr);
+	tab2.appendChild(hr);
 	var chart_div = document.createElement("div");
 	chart_div.setAttribute("id", "map_returns_chart");
 	chart_div.setAttribute("class", "map-charts");
@@ -608,7 +626,7 @@ function allMapDrops(rows) {
 		tab1.removeChild(tab1.firstChild);
 	}
 	var hr = document.createElement("hr");
-	document.getElementById("tab1").appendChild(hr);
+	tab1.appendChild(hr);
 	var chart_div = document.createElement("div");
 	chart_div.setAttribute("id", "map_drops_chart");
 	chart_div.setAttribute("class", "map-charts");
@@ -675,7 +693,7 @@ function avgClearTimes(data) {
         tab4.removeChild(tab4.firstChild);
     }
     var hr = document.createElement("hr");
-    document.getElementById("tab4").appendChild(hr);
+    tab4.appendChild(hr);
     var chart_div = document.createElement("div");
     chart_div.setAttribute("id", "clear_times_chart");
     chart_div.setAttribute("class", "bar-charts");
@@ -734,7 +752,7 @@ function gerealStatTable(all_gen_stats) {
 	}
 }
 
-function getMapDropTable (map_num) {
+function getMapDropTable(map_num) {
     return 	'<h4>Maps Dropped:</h4>'+
     	'<table id="map_drops'+map_num+'" class="map_drops table table-striped table-bordered" '+
     	'cellspacing="0" width="100%"></table>';
@@ -802,23 +820,23 @@ function allMapDataTable(all_maps_ran, all_maps_dropped) {
 			retrieve: true,
 	        columns: [
 	            {
-	                class:          "details-control",
-	                orderable:      true,
+	                class:          'details-control',
+	                orderable:      false,
 	                //data:           null,
-	                defaultContent: "",
+	                defaultContent: '',
 	                searchable: 	false
 	            },
-	            { title: "Start / End / Clear Time" },
-	            { title: "Name" },
-	            { title: "Tier" },
-	            { title: "IQ" },
-	            { title: "Bonus IQ" },
-	            { title: "IR" },
-	            { title: "Pack Size" },
-	            { title: "Rarity" },
-	            { title: "Mods" },
-	            { title: "More Mods" },
-	            { title: "Time Cleared" }
+	            { title: 'Start / End / Clear Time' },
+	            { title: 'Name' },
+	            { title: 'Tier' },
+	            { title: 'IQ' },
+	            { title: 'Bonus IQ' },
+	            { title: 'IR' },
+	            { title: 'Pack Size' },
+	            { title: 'Rarity' },
+	            { title: 'Mods' },
+	            { title: 'More Mods' },
+	            { title: 'Time Cleared' }
 	        ],
 	        columnDefs: [
 	            {
@@ -857,6 +875,10 @@ function allMapDataTable(all_maps_ran, all_maps_dropped) {
 	            {
 	                targets: [5, 11], // Don't show Bonus_IQ or Time_Cleared columns
 	                visible: false
+	            },
+	            { 
+	            	width: '2%', 
+	            	targets: 0 
 	            }
 	        ],
 	        language:
@@ -1038,6 +1060,42 @@ body {
 .body {
 	margin: auto 27px;
 	width: 957px;
+}
+#loading_div {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+	-webkit-transform-style: preserve-3d;
+	-moz-transform-style: preserve-3d;
+	transform-style: preserve-3d;
+    width: 100%;
+    height: 100%;
+}
+#loading_bg {
+	background: #700;
+	opacity: 0.3;
+	position: absolute;
+    left: 0px;
+    top: 0px;
+    width: 100%;
+    height: 100%;
+}
+#loading_text {
+	color: #F00;
+    display: block;
+    font-family: 'Carrois Gothic SC', sans-serif;
+    font-size: 36px;
+    margin: auto;
+    position: relative;
+    /* opacity: 1; */
+    top: 50%;
+    -webkit-transform: translateY(-50%);
+	-ms-transform: translateY(-50%);
+    transform: translateY(-50%);
+    text-align: center;
+    /* width: 100px; */
+    height: 44px;
+
 }
 .db-upload {
     position: relative;
