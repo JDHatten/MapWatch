@@ -7,13 +7,16 @@ setup(
         ]),
         ('platforms', [
             r'C:\\Python34\\Lib\\site-packages\\PyQt5\\plugins\\platforms\\qwindows.dll'
+        ]),
+        ('', [
+            r'C:\\Python34\\Lib\\site-packages\\requests\\cacert.pem'
         ])
     ],
     options={'py2exe': {
             'compressed': True,
             'dist_dir': 'MapWatch',
             'optimize': 1,
-            'excludes': ['pydoc', 'doctest', 'pdb', 'inspect', 'pyreadline', 'optparse', 'calendar']
+            'excludes': ['pydoc', 'doctest', 'pdb', 'inspect', 'pyreadline', 'optparse']
         }
     },
     windows=[{

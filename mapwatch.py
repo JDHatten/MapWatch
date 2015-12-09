@@ -11,7 +11,6 @@ import requests
 import sqlite3
 import time
 import webbrowser
-#import urllib
 import win32con
 import win32gui
 
@@ -27,7 +26,6 @@ from about import Ui_About
 ### Create custom icons
 ### Create more HTML statistic files
 ### Sacrifice Fragments ...eh
-### 
 ### 
 
 class Map():
@@ -682,7 +680,7 @@ class About(QtWidgets.QDialog):
         self.repaint()
         latest_tag = None
         try:
-            r = requests.get('https://api.github.com/repos/JDHatten/MapWatch/releases')
+            r = requests.get('https://api.github.com/repos/JDHatten/MapWatch/releases', verify='cacert.pem')
             latest_tag = r.json()[0]['tag_name']
         except:
             self.parent.error('Error: Checking for an update failed.', sys.exc_info())
