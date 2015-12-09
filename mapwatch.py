@@ -1,17 +1,19 @@
 import sys
 import os
 import re
+import configparser
 import copy
-import json
-import sqlite3
-import time
 import datetime
+import json
 import pyperclip
 import pywinauto
-import configparser
+import requests
+import sqlite3
+import time
 import webbrowser
-import win32gui
+#import urllib
 import win32con
+import win32gui
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import pyqtSignal, Qt, QThread
@@ -19,6 +21,7 @@ from PyQt5.QtWidgets import QFileDialog
 from window import Ui_MainWindow
 from confirm import Ui_Confirm
 from preferences import Ui_Preferences
+from about import Ui_About
 
 # TODOS:
 ### Create custom icons
@@ -88,10 +91,10 @@ class MapWatchWindow(QtWidgets.QMainWindow):
             ['Onslaught', '8x Chaos Orbs', 4, 30, '40% Increased Monster Cast & Attack Speed'],
             ['Torment', '8x Chaos Orbs', 5, 12, 'Area spawns 3 extra Tormented Spirits (Stacks with any that naturally spawned)'],
             ['Beyond', '12x Chaos Orbs', 5, 8, 'Slaying enemies close together can attract monsters from Beyond this realm'],
+            ['Tempest', '6x Choas Orbs', 6, 16, 'Powerful Tempests can affect both Monsters and You'],
             ['Ambush', '12x Chaos Orbs', 6, 0, 'Area contains 4 extra Strongboxes'],
-            ['Nemesis', '1x Exalted Orb', 7, 0, 'One Rare Per Pack, Rare Monsters Each Have A Nemesis Mod'],
-            ['Tempest', '3x Exalted Orbs', 8, 16, 'Powerful Tempests can affect both Monsters and You'],
-            ['Warbands', '3x Exalted Orbs', 8, 16, 'Area is inhabited by 2 additional Warbands']
+            ['Warbands', '12x Chaos Orbs', 7, 16, 'Area is inhabited by 2 additional Warbands'],
+            ['Nemesis', '1x Exalted Orb', 7, 0, 'One Rare Per Pack, Rare Monsters Each Have A Nemesis Mod']
         ]
         #Windows hwnd
         self._handle = None
@@ -128,6 +131,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         self.ui_prefs = Preferences(self)
         self.setPrefs()
         self.addZanaMods()
+        self.ui_about = About(self)
         if not int(self.settings['AlwaysOnTop']):
             self.setWindowFlags(Qt.CustomizeWindowHint|Qt.WindowCloseButtonHint|Qt.X11BypassWindowManagerHint)
         else:
@@ -464,8 +468,9 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         print("Preferences Updated")
 
     def about(self):
-        self.ui_confirm.boxType('about')
-        self.ui_confirm.exec_('About', 'Map Watch\nVersion '+self.version+'\n\nCreated by\nJonathan.D.Hatten@gmail.com\nIGN: Grahf_Azura')
+        self.ui_about.exec_()
+        # self.ui_confirm.boxType('about')
+        # self.ui_confirm.exec_('About', 'Map Watch\nVersion '+self.version+'\n\nCreated by\nJonathan.D.Hatten@gmail.com\nIGN: Grahf_Azura')
 
     def updateWindowTitle(self):
         if self.mapDB.db_file:
@@ -534,7 +539,7 @@ class ConfirmDialog(QtWidgets.QDialog):
         if message:
             self.ui.message.setText(message)
         return super().exec_()
-    
+
     def setTitle(self, text):
         self.setWindowTitle(text)
 
@@ -548,24 +553,30 @@ class ConfirmDialog(QtWidgets.QDialog):
             self.ui.message.setGeometry(QtCore.QRect(10, 0, 251, 61))
             self.ui.message.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
             self.ui.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.No|QtWidgets.QDialogButtonBox.Yes)
+            self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+            self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.No).setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         if type is 'confirmXL':
             self.setFixedSize(270, 149)
             self.ui.buttonBox.setGeometry(QtCore.QRect(10, 120, 251, 23))
             self.ui.message.setGeometry(QtCore.QRect(10, 0, 251, 121))
             self.ui.message.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
             self.ui.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.No|QtWidgets.QDialogButtonBox.Yes)
+            self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Yes).setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+            self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.No).setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         elif type is 'error':
             self.setFixedSize(270, 199)
             self.ui.buttonBox.setGeometry(QtCore.QRect(10, 170, 251, 23))
             self.ui.message.setGeometry(QtCore.QRect(10, 0, 251, 161))
             self.ui.message.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
             self.ui.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Ok)
+            self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         elif type is 'about':
             self.setFixedSize(270, 189)
             self.ui.buttonBox.setGeometry(QtCore.QRect(10, 160, 251, 23))
             self.ui.message.setGeometry(QtCore.QRect(10, 0, 251, 141))
             self.ui.message.setAlignment(Qt.AlignHCenter|Qt.AlignVCenter)
             self.ui.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Ok)
+            self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
 
 
 class Preferences(QtWidgets.QDialog):
@@ -578,8 +589,11 @@ class Preferences(QtWidgets.QDialog):
         self.setFixedSize(400, 342)
         self.loadData()
         self.ui.pref_buttons.accepted.connect(self.accept)
+        self.ui.pref_buttons.button(QtWidgets.QDialogButtonBox.Save).setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.ui.pref_buttons.button(QtWidgets.QDialogButtonBox.Discard).clicked.connect(self.reject)
+        self.ui.pref_buttons.button(QtWidgets.QDialogButtonBox.Discard).setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         self.ui.pref_buttons.button(QtWidgets.QDialogButtonBox.RestoreDefaults).clicked.connect(self.restoreDefaults)
+        self.ui.pref_buttons.button(QtWidgets.QDialogButtonBox.RestoreDefaults).setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         print("Preferences Window loaded")
 
     def loadData(self):
@@ -635,6 +649,56 @@ class Preferences(QtWidgets.QDialog):
     def exec_(self):
         self.insertPrefs()
         return super().exec_()
+
+
+class About(QtWidgets.QDialog):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent = parent
+        self.ui = Ui_About()
+        self.ui.setupUi(self)
+        self.setFixedSize(334, 290)
+        self.ui.version.setText('Version '+self.parent.version)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).clicked.connect(self.accept)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Ok).setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.ui.email.mouseReleaseEvent = self.email
+        self.ui.update.mouseReleaseEvent = self.checkForUpdates
+        print("About Window loaded")
+
+    def exec_(self):
+        return super().exec_()
+
+    def accept(self):
+        super().accept()
+
+    def email(self, event):
+        print('Email Clicked')
+        webbrowser.open('mailto:%s?subject=%s&body=' % ('Jonathan.D.Hatten@gmail.com', 'Map%20Watch%20Inquiry'))
+
+    def checkForUpdates(self, event):
+        print('Checking for updates...')
+        self.ui.update.setText('<html><head/><body><p><span style="color:#0055ff;">Checking...</span></p></body></html>')
+        self.repaint()
+        latest_tag = None
+        try:
+            r = requests.get('https://api.github.com/repos/JDHatten/MapWatch/releases')
+            latest_tag = r.json()[0]['tag_name']
+        except:
+            self.parent.error('Error: Checking for an update failed.', sys.exc_info())
+        if latest_tag:
+            latest_tag = float(latest_tag[1:])
+            if float(self.parent.version) >= latest_tag:
+                self.ui.update.setText('<html><head/><body><p><span style="color:#0055ff;">No Update Available</span></p></body></html>')
+            else:
+                self.ui.update.setText('<html><head/><body><p><span style="color:#0055ff;">An Update is Available</span></p></body></html>')
+                self.ui.update.mouseReleaseEvent = self.getUpdate
+        else:
+            self.ui.update.setText('<html><head/><body><p><span style="color:#0055ff;">Update Available?</span></p></body></html>')
+            self.ui.update.mouseReleaseEvent = self.getUpdate
+
+    def getUpdate(self, event):
+        webbrowser.open('https://github.com/JDHatten/MapWatch/releases')
 
 
 class MapWatcher(QThread):
