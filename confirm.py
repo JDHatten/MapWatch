@@ -19,7 +19,7 @@ class Ui_Confirm(object):
         Confirm.setSizePolicy(sizePolicy)
         self.buttonBox = QtWidgets.QDialogButtonBox(Confirm)
         self.buttonBox.setGeometry(QtCore.QRect(10, 60, 251, 23))
-        self.buttonBox.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.buttonBox.setCursor(QtGui.QCursor(QtCore.Qt.ArrowCursor))
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
         self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.No|QtWidgets.QDialogButtonBox.Yes)
         self.buttonBox.setCenterButtons(True)

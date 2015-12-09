@@ -80,7 +80,7 @@ class Ui_Preferences(object):
         self.pref_statistics.setObjectName("pref_statistics")
         self.pref_buttons = QtWidgets.QDialogButtonBox(Preferences)
         self.pref_buttons.setGeometry(QtCore.QRect(10, 310, 381, 23))
-        self.pref_buttons.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.pref_buttons.setCursor(QtGui.QCursor(QtCore.Qt.ArrowCursor))
         self.pref_buttons.setStandardButtons(QtWidgets.QDialogButtonBox.Discard|QtWidgets.QDialogButtonBox.RestoreDefaults|QtWidgets.QDialogButtonBox.Save)
         self.pref_buttons.setObjectName("pref_buttons")
         self.line_2 = QtWidgets.QFrame(Preferences)
