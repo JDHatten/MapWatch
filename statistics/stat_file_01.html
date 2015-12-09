@@ -17,9 +17,9 @@
 <script src='https://cdn.datatables.net/1.10.10/js/jquery.dataTables.min.js'></script>
 <script src='https://cdn.datatables.net/1.10.10/js/dataTables.bootstrap.min.js'></script>
 
-<script src='../js/sql.js'></script>
 <script src='../js/map_names.js'></script>
 <script src='../js/settings.js'></script>
+<script src='../js/sql.js'></script>
 <script type="text/javascript" src="https://www.google.com/jsapi"></script>
 
 <script>
@@ -51,16 +51,13 @@ window.onload = function () {
 			var loading_div = document.createElement("div");
 			loading_div.setAttribute("id", "loading_div");
 			body.appendChild(loading_div);
-			
 			var loading_bg = document.createElement("div");
 			loading_bg.setAttribute("id", "loading_bg");
 			loading_div.appendChild(loading_bg);
-
 			var loading_text = document.createElement("div");
 			loading_text.setAttribute("id", "loading_text");
 			loading_text.innerHTML = "Loading...";
 			loading_div.appendChild(loading_text);
-
 			//Get the file object 
 			var fileTobeRead = fileSelected.files[0];
 			var r = new FileReader();
@@ -242,6 +239,8 @@ function getData(db) {
 	}
 	console.log(map_returns);
 	avgMapReturns(map_returns);
+	maps_dropped.free();
+	maps_ran.free();
 
 	/**********
 	* Get number of Maps dropped by Tier.  Count All Map Drops!
@@ -269,6 +268,7 @@ function getData(db) {
 		}
 	}
 	allMapDrops(all_drops);
+	maps_dropped.free();
 
 	/**********
 	* Get all map data to be placed into a table.  All Map Data!
@@ -375,6 +375,9 @@ function getData(db) {
 	console.log(all_maps_dropped);
 	console.log(maps_dropped);
 	allMapDataTable(all_maps_ran, all_maps_dropped);
+	maps_dropped_all.free();
+	maps_dropped_unlinked.free();
+	maps_ran_all.free();
 
 	/**********
 	* Get number of map drops sorted by IQ of map ran.  Map Drops by IQ Range!
@@ -443,7 +446,9 @@ function getData(db) {
 	}
 	console.log(map_drops_by_iq);
 	mapDropsByIQ(map_drops_by_iq, 2);
-	
+	maps_dropped.free();
+	maps_ran.free();
+
 	// Gen Stat
 	var i_avgtm = all_gen_stat_names.indexOf('Average Time Spent in each Map');
 	var i_amotm = all_gen_stat_names.indexOf('Amount of Time Spent in Maps');
@@ -483,6 +488,7 @@ function getData(db) {
     }
     console.log(avg_clear_speeds);
     avgClearTimes(avg_clear_speeds);
+	maps_ran.free();
 
     // Gen Stat
     all_gen_stats[i_avgtm][1] = formatTime(all_gen_stats[i_amotm][1] / all_gen_stats[i_avgtm][1], true);
@@ -575,6 +581,8 @@ function getData(db) {
 	all_gen_stats[i_amotm][1] = formatTime(all_gen_stats[i_amotm][1]);
     
     gerealStatTable(all_gen_stats);
+    maps_dropped.free();
+	maps_ran.free();
 
 	$('#tab1').addClass('tabs');
 	$('#tab2').addClass('tabs');
@@ -1087,13 +1095,11 @@ body {
     font-size: 36px;
     margin: auto;
     position: relative;
-    /* opacity: 1; */
     top: 50%;
     -webkit-transform: translateY(-50%);
 	-ms-transform: translateY(-50%);
     transform: translateY(-50%);
     text-align: center;
-    /* width: 100px; */
     height: 44px;
 
 }
@@ -1262,6 +1268,9 @@ footer {
 footer p {
 	text-align: center;
 }
+footer a {
+	cursor: pointer;
+}
 </style>
 </head>
 <body>
@@ -1272,12 +1281,6 @@ footer p {
 				<div class='header'>
 					<h1>Map Drop Statistics</h1>
 					<h2>Select a database file of which map data are to be read:</h2>
-					<!-- <button id='db_load_btn' class='btn' type='button'>&nbsp; Load Database</button> -->
-					<!-- <input id="uploadFile" placeholder="Choose File" disabled="disabled" />
-					<div class="fileUpload btn btn-primary">
-						<span>Upload</span>
-						<input  id="db_load_btn" type="file" accept=".sqlite" disabled="true" />
-					</div> -->
 					<div class="db-upload">
 						<!-- <label for="db_load_btn"> -->
 							<!-- <img src="../images/button.png" /> -->
@@ -1310,7 +1313,7 @@ footer p {
 			</div>
 		</div>
 		<footer>
-			<p>Map Watch app developer (IGN) Grahf_Azura.  This map drop statistics file was created by Grahf_Azura.</p>
+			<p>Map Watch app developer <a href="mailto:Jonathan.D.Hatten@gmail.com?Subject=Map%20Watch%20Inquiry">Jonathan.D.Hatten@gmail.com</a> / IGN: Grahf_Azura.</p>
 			<p><a href='http://www.pathofexile.com/'>Path of Exile</a> is a PC game developed and owned by <a href='http://www.grindinggear.com/'>Grinding Gear Games</a></p>
 		</footer>
 	</article>
