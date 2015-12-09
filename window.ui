@@ -592,6 +592,9 @@ p, li { white-space: pre-wrap; }
        <height>23</height>
       </rect>
      </property>
+     <property name="cursor">
+      <cursorShape>PointingHandCursor</cursorShape>
+     </property>
     </widget>
     <widget class="QSpinBox" name="mr_add_bonus_iq">
      <property name="geometry">
@@ -601,6 +604,9 @@ p, li { white-space: pre-wrap; }
        <width>42</width>
        <height>23</height>
       </rect>
+     </property>
+     <property name="cursor">
+      <cursorShape>PointingHandCursor</cursorShape>
      </property>
      <property name="readOnly">
       <bool>false</bool>
