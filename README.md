@@ -1,18 +1,16 @@
 # MapWatch
 #### A Path of Exile application that collects and reports map drop data and statistics.
 
-
 ![MapWatch](http://i.imgur.com/fOi1ayu.png "Map Watch - Main Window")
-
 
 ### Description:
 *Map Watch* is an application that records map drops in the game Path of Exile.  Once enough data is collected it can show different statistics on the map drops recorded via a local webpage.  
 
 
 ### Use:
-You can run the Python script in version 3.4 or download the full release that includes a Windows exe that any Windows PC should be able to run.  While in game the application will run in the background and it will popup once a player finds and copies a map's data to the clipboard.  To do this, simply highlight a map in your inventory and press Ctrl+C.  
-	
-Once a map is selected you can choose to add it to your map drops or run it.  If you choose to run the map, all future map drops that you add will be linked to this map until you select map cleared.  Maps can also be added unlinked to any map currently running and removed (in order added) from the database.
+You can run the Python script in version 3.4 or download the Windows binary release.  While in game the application will run in the background and it will popup once a player finds and copies a map's data to the clipboard.  To do this, simply highlight a map (or Vaal Fragment) in your inventory and press Ctrl+C.  
+
+Once a map is selected you can choose to add it to your map drops or run it.  If you choose to run the map, all future map drops that you add will be linked to this map until you select map cleared.  Maps can also be added unlinked to any map currently running and removed (in order added) from the database. 
 
 Once a suitable about of map data has been collected you can open a statistics file.  These files will show many charts, tables, and otherwise useful information regarding your mapping progress in the game Path of Exile.  
 
@@ -20,7 +18,7 @@ Once a suitable about of map data has been collected you can open a statistics f
 ### Important Note:
 It is highly recommended you play Path of Exile in a **Windowed Mode** while using this application.  Playing in Full Screen will cause problems that may lead to your death in game (i.e. the game might minimize).  Don't say I didn't warn you.
 
-For version 0.2+ it is recommended you start a new database file (or overwrite existing).  Some statistics might be incorrect because of a change in the database structure.  
+Version 0.1 database files still in use are obsolete. It is recommended you start a new database file (or overwrite existing).  Some statistics might be incorrect because of a change in the database structure.  
 
 
 ### Keyboard Shortcuts:
@@ -33,6 +31,7 @@ For version 0.2+ it is recommended you start a new database file (or overwrite e
 | Run Map | Ctrl + R |
 | Focus Zana Mods | Z |
 | Focus Bonus IQ | Q |
+| Minimize | M |
 | New DB File | F1 |
 | Load DB File | F2 |
 | Open Stat File | F3 |
@@ -64,8 +63,19 @@ Players Recover Life, Mana and Energy Shield 40% slower
 Travel to this Map by using it in the Eternal Laboratory or a personal Map Device. Maps can only be used once.
 ```
 
+
 ### Versions:
-*0.2*
+*0.3*
+* *New:* Added "The Alluring Abyss" and "The Apex of Sacrifice" as maps
+* Unidentified maps now allow you to add any amount of Bonus IQ
+* Added a loading screen to statistics files that will show when loading larger databases
+* Added a new shortcut key "M" that minimizes application
+* New About window with a 'check for update' link
+* *Fixes:* Order/sorting of date column in statistics files now working properly
+* Always on top now stays active after a map is selected and no longer requires a restart to change
+* Zana Mods updated to 2.1.0 patch changes
+
+*0.2*	
 * *New:* Added Zana mods and Bonus IQ that can be added to running maps
 * Added two more general statistics to stat_file_01.html
 * Added many keyboard shortcuts for different actions
