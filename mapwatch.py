@@ -21,6 +21,8 @@ from window import Ui_MainWindow
 from confirm import Ui_Confirm
 from preferences import Ui_Preferences
 from about import Ui_About
+from addmore import Ui_AddMore
+from counter import Ui_Counter
 
 # TODOS:
 ### Create custom icons
@@ -45,7 +47,16 @@ class Map():
     Mod6 = 13
     Mod7 = 14
     Mod8 = 15
-    Mod9 = 16 # Zana Mod
+    Mod9 = 16
+    Mod10 = 17
+    Mod11 = 18
+    Mod12 = 19
+    ZanaMod = 20
+    League = 21
+    Fragments = 21
+    CartoFound = 22
+    ZanaFound = 23
+    Notes = 24
 
 class Maps():
     Dropped = 0
@@ -65,7 +76,7 @@ class ZanaMod():
 
 class Button():
     Add = 0
-    Remove = 1
+    Delete = 1
     Run = 2
     Clear = 3
 
@@ -74,26 +85,10 @@ class MapWatchWindow(QtWidgets.QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         # General Settings
-        self.version = '0.3'
+        self.version = '0.4'
         self.appTitle = 'Map Watch (v'+self.version+')'
         self.setWindowIcon(QtGui.QIcon(r'images\\icon.ico'))
         self.firstClose = 1
-        self.zana_mods = [ # TODO: maybe load from outside source? settings.ini?
-            ['None', 'Free', 0, 0, ''],
-            ['Item Quantity', 'Free', 1, 0, '+1% Quantity Per Master Level'],
-            ['Rampage', '4x Chaos Orbs', 2, 0, 'Slaying enemies quickly grants Rampage bonuses'],
-            ['Bloodlines', '4x Chaos Orbs', 2, 15, 'Magic Monster Packs each have a Bloodline Mod'],
-            ['Anarchy', '8x Chaos Orbs', 3, 16, 'Area is inhabited by 4 additional Rogue Exiles'],
-            ['Invasion', '8x Chaos Orbs', 3, 16, 'Area is inhabited by 3 additional Invasion Bosses'],
-            ['Domination', '10x Chaos Orbs', 4, 0, 'Area Contains 5 Extra Shrines'],
-            ['Onslaught', '8x Chaos Orbs', 4, 30, '40% Increased Monster Cast & Attack Speed'],
-            ['Torment', '8x Chaos Orbs', 5, 12, 'Area spawns 3 extra Tormented Spirits (Stacks with any that naturally spawned)'],
-            ['Beyond', '12x Chaos Orbs', 5, 8, 'Slaying enemies close together can attract monsters from Beyond this realm'],
-            ['Tempest', '6x Choas Orbs', 6, 16, 'Powerful Tempests can affect both Monsters and You'],
-            ['Ambush', '12x Chaos Orbs', 6, 0, 'Area contains 4 extra Strongboxes'],
-            ['Warbands', '12x Chaos Orbs', 7, 16, 'Area is inhabited by 2 additional Warbands'],
-            ['Nemesis', '1x Exalted Orb', 7, 0, 'One Rare Per Pack, Rare Monsters Each Have A Nemesis Mod']
-        ]
         #Windows hwnd
         self._handle = None
         self.window = None
@@ -108,6 +103,13 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         restoreAction = QtWidgets.QAction(icon, '&Show Map Watch', self)
         restoreAction.triggered.connect(self.popup)
         menu.addAction(restoreAction)
+
+        # icon = QtGui.QIcon('')
+        # self.pauseAction = QtWidgets.QAction(icon, '&Pause', self)
+        # self.pauseAction.triggered.connect(lambda: self.pauseMapWatch(True))
+        # menu.addAction(self.pauseAction)
+
+        menu.addSeparator()
         icon = QtGui.QIcon('')
         exitAction = QtWidgets.QAction(icon, '&Exit', self)
         exitAction.triggered.connect(self.closeApplication)
@@ -115,7 +117,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         self.sysTrayIcon.setContextMenu(menu)
         # This will do the Map Watching in a different thread
         self.thread = MapWatcher()
-        self.thread.runLoop()
+        self.thread.runLoop(True)
         self.thread.trigger.connect(self.newMapFound)  # Triggered when new map found
         # Setup Map Database
         self.map_data = None
@@ -123,24 +125,44 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         # Configure UI
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self.setFixedSize(471, 413)
+        self.setFixedSize(471, 382)
         self.setWindowTitle(self.appTitle)
         self.ui_confirm = ConfirmDialog(self)
+
         self.ui_prefs = Preferences(self)
-        self.setPrefs()
-        self.addZanaMods()
+        self.ui_addmore = AddMore(self)
         self.ui_about = About(self)
+        self.setPrefs()
+
         if not int(self.settings['AlwaysOnTop']):
             self.setWindowFlags(Qt.CustomizeWindowHint|Qt.WindowCloseButtonHint|Qt.X11BypassWindowManagerHint)
         else:
+            #self.setStyleSheet('background: rgba(0,0,255,20%)')
+            #self.setAttribute(Qt.WA_NoSystemBackground)
+            #self.setAttribute(Qt.WA_TranslucentBackground)
+            #self.setAttribute(Qt.WA_OpaquePaintEvent)
+            #self.setAttribute(Qt.WA_PaintOnScreen)
+
             self.setWindowFlags(Qt.CustomizeWindowHint|Qt.WindowCloseButtonHint|Qt.WindowStaysOnTopHint|Qt.X11BypassWindowManagerHint)
+            #self.setWindowFlags(Qt.CustomizeWindowHint|Qt.WindowCloseButtonHint|Qt.FramelessWindowHint|Qt.WindowStaysOnTopHint|Qt.X11BypassWindowManagerHint)
+            #setWindowFlags(Qt::Widget |Qt.FramelessWindowHint);t.
+            #setParent(0); // Create TopLevel-Widget
+
+            # from ctypes import windll, c_int, byref
+            # windll.dwmapi.DwmExtendFrameIntoClientArea(c_int(self.winId()), byref(c_int(-1)))
+
+            # self.setAttribute(Qt.WA_OpaquePaintEvent)
+            # self.setAttribute(Qt.WA_PaintOnScreen)
+
+
         # Button Actions
         self.ui.ms_add_map.clicked.connect(self.addMap)
-        self.ui.ms_remove_map.clicked.connect(self.removeMap)
+        self.ui.ms_delete_map.clicked.connect(self.deleteMap)
         self.ui.mr_clear_map.clicked.connect(self.clearMap)
+        self.ui.mr_add_more.clicked.connect(self.addMore)
         self.ui.mr_run_map.clicked.connect(self.runMap)
-        self.ui.mr_add_zana_mod.currentIndexChanged.connect(self.changeZanaMod)
-        self.ui.mr_add_bonus_iq.valueChanged.connect(self.changeBonusIQ)
+        # self.ui.mr_add_zana_mod.currentIndexChanged.connect(self.changeZanaMod)
+        # self.ui.mr_add_bonus_iq.valueChanged.connect(self.changeBonusIQ)
         # Menu Actions
         self.ui.menu_create_new_db.triggered.connect(lambda: self.setDBFile(True))
         self.ui.menu_load_db.triggered.connect(self.setDBFile)
@@ -148,20 +170,22 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         self.ui.menu_exit_app.triggered.connect(self.closeApplication)
         self.ui.menu_ms_add_map.triggered.connect(self.addMap)
         self.ui.menu_ms_add_unlinked_map.triggered.connect(lambda: self.addMap(True))
-        self.ui.menu_ms_remove_map.triggered.connect(self.removeMap)
+        self.ui.menu_ms_delete_map.triggered.connect(self.deleteMap)
         self.ui.menu_mr_clear_map.triggered.connect(self.clearMap)
         self.ui.menu_mr_run_map.triggered.connect(self.runMap)
         self.ui.menu_preferences.triggered.connect(self.getPrefs)
+        self.ui.menu_pause.triggered.connect(lambda: self.pauseMapWatch(True))
         self.ui.menu_about.triggered.connect(self.about)
         # Keyboard Shortcuts
         self.hotkey_add = QtWidgets.QShortcut(QtGui.QKeySequence("A"), self, self.addMap)
         self.hotkey_addu = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+U"), self, lambda: self.addMap(True))
-        QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+D"), self, self.removeMap)
+        QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+D"), self, self.deleteMap)
         QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+X"), self, self.clearMap)
         QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+R"), self, self.runMap)
-        QtWidgets.QShortcut(QtGui.QKeySequence("Z"), self, lambda: self.giveFocus('ZanaMod'))
-        QtWidgets.QShortcut(QtGui.QKeySequence("Q"), self, lambda: self.giveFocus('BonusIQ'))
+        # QtWidgets.QShortcut(QtGui.QKeySequence("Z"), self, lambda: self.giveFocus('ZanaMod'))
+        # QtWidgets.QShortcut(QtGui.QKeySequence("Q"), self, lambda: self.giveFocus('BonusIQ'))
         QtWidgets.QShortcut(QtGui.QKeySequence("M"), self, self.minimizeToSysTray)
+        QtWidgets.QShortcut(QtGui.QKeySequence("Esc"), self, self.minimizeToSysTray)
         QtWidgets.QShortcut(QtGui.QKeySequence("F1"), self, lambda: self.setDBFile(True))
         QtWidgets.QShortcut(QtGui.QKeySequence("F2"), self, self.setDBFile)
         QtWidgets.QShortcut(QtGui.QKeySequence("F3"), self, self.openStatFile)
@@ -209,11 +233,21 @@ class MapWatchWindow(QtWidgets.QMainWindow):
                 win32gui.SetWindowPos(self._handle, win32con.HWND_NOTOPMOST, 0, 0, 0, 0, win32con.SWP_SHOWWINDOW + win32con.SWP_NOMOVE + win32con.SWP_NOSIZE)
             self.window.SetFocus() #STEALFOCUS
 
-    def giveFocus(self, widget):
-        if widget is 'ZanaMod':
-            self.ui.mr_add_zana_mod.setFocus(Qt.ShortcutFocusReason)
-        elif widget is 'BonusIQ':
-            self.ui.mr_add_bonus_iq.setFocus(Qt.ShortcutFocusReason)
+    def pauseMapWatch(self, pause):
+        print('Pause: '+str(pause))
+        self.thread.pause(pause)
+        if pause:
+            self.ui.menu_pause.setText("&Start Map Watching")
+            self.ui.menu_pause.triggered.connect(lambda: self.pauseMapWatch(False))
+        else:
+            self.ui.menu_pause.setText("&Stop Map Watching")
+            self.ui.menu_pause.triggered.connect(lambda: self.pauseMapWatch(True))
+
+    # def giveFocus(self, widget):
+    #     if widget is 'ZanaMod':
+    #         self.ui.mr_add_zana_mod.setFocus(Qt.ShortcutFocusReason)
+    #     elif widget is 'BonusIQ':
+    #         self.ui.mr_add_bonus_iq.setFocus(Qt.ShortcutFocusReason)
 
     def newMapFound(self, map_data):
         self.popup()
@@ -288,6 +322,15 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         if Map.Mod9 in self.map_data:
             all_mods = all_mods + '\r\n' + self.map_data[Map.Mod9]
             self.ui.ms_mods.setText(all_mods)
+        if Map.Mod10 in self.map_data:
+            all_mods = all_mods + '\r\n' + self.map_data[Map.Mod10]
+            self.ui.ms_mods.setText(all_mods)
+        if Map.Mod11 in self.map_data:
+            all_mods = all_mods + '\r\n' + self.map_data[Map.Mod11]
+            self.ui.ms_mods.setText(all_mods)
+        if Map.ZanaMod in self.map_data:
+            all_mods = all_mods + '\r\n' + self.map_data[Map.ZanaMod]
+            self.ui.ms_mods.setText(all_mods)
 
     def updateUiMapRunning(self, clear=False):
         print('UI Updated')
@@ -322,28 +365,29 @@ class MapWatchWindow(QtWidgets.QMainWindow):
 
     def updateUiMapRunningBonuses(self):
         print('UI Updated')
+        #print(self.mapDB.map_running[Map.BonusIQ])
         if Map.BonusIQ in self.mapDB.map_running and self.mapDB.map_running[Map.BonusIQ] != 0:
             self.ui.mr_bonus_iq.setText('+'+str(self.mapDB.map_running[Map.BonusIQ])+'%')
         else:
             self.ui.mr_bonus_iq.setText('')
-        if Map.Mod9 in self.mapDB.map_running:
-            if self.mapDB.map_running[Map.Mod9] and self.map_mod_text:
-                all_mods = self.map_mod_text + '\r\n<br><b>' +self.mapDB.map_running[Map.Mod9]+ '</b>'
+        if Map.ZanaMod in self.mapDB.map_running:
+            if self.mapDB.map_running[Map.ZanaMod] and self.map_mod_text:
+                all_mods = self.map_mod_text + '\r\n<br><b>' +self.mapDB.map_running[Map.ZanaMod]+ '</b>'
                 self.ui.mr_mods.setText(all_mods)
             else:
                 self.ui.mr_mods.setText(self.map_mod_text)
 
-    def removeMap(self):
+    def deleteMap(self):
         print('Removing Last Map')
         self.ui_confirm.boxType('confirm')
         del_map = None
-        if self.ui_confirm.exec_('Remove Map?', 'Are you sure you want to delete the last map saved to database?'):
+        if self.ui_confirm.exec_('Delete Map?', 'Are you sure you want to delete the last map saved to database?'):
             del_map = self.mapDB.deleteLastMap(Maps.Dropped)
             self.updateWindowTitle()
         if del_map:
             self.sysTrayIcon.showMessage(
-                'Last Map Removed',
-                del_map+' was removed from the database.',
+                'Last Map Deleted',
+                del_map+' was deleted from the database.',
                 1, 1000)
 
     def addMap(self, unlinked=False):
@@ -369,22 +413,16 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         else:
             return True
 
+    def addMore(self):
+        if self.ui_addmore.exec_() and self.mapDB.map_running:
+            self.updateUiMapRunningBonuses()
+
     def runMap(self):
         print('Running Selected Map')
         if self.mapDB.runMap(self.map_data):
             self.updateUiMapRunning()
             self.mapDB.map_type_running = self.thread.map_type
-            self.resetBonuses()
-            if Map.Mod1 in self.mapDB.map_running and self.mapDB.map_running[Map.Mod1] == 'Unidentified':
-                self.ui.mr_add_bonus_iq.setMaximum(200)
-                self.ui.mr_add_bonus_iq.setSingleStep(1)
-            else:
-                self.ui.mr_add_bonus_iq.setMaximum(15)
-                self.ui.mr_add_bonus_iq.setSingleStep(5)
-            if self.mapDB.map_type_running == MapType.Fragment or self.mapDB.map_type_running == MapType.RareFragment:
-                self.ui.mr_add_bonus_iq.setEnabled(False)
-            else:
-                self.ui.mr_add_bonus_iq.setEnabled(True)
+            self.ui_addmore.reset(True)
 
     def setDBFile(self, new=False):
         if self.clearMap():
@@ -405,44 +443,44 @@ class MapWatchWindow(QtWidgets.QMainWindow):
                 self.settings['LastOpenedDB'] = file_name[0]
                 writeSettings(self.settings)
 
-    def addZanaMods(self):
-        print('Adding Zana Mods to Combo Box')
-        self.ui.mr_add_zana_mod.clear()
-        for i, zana_mod in enumerate(self.zana_mods):
-            self.ui.mr_add_zana_mod.addItem(zana_mod[ZanaMod.Name] + ' (' + zana_mod[ZanaMod.Cost] + ')')
-            if int(self.settings['ZanaDefaultModIndex']) == i:
-                self.ui.mr_add_zana_mod.setCurrentIndex(i)
-            if int(self.settings['ZanaLevel']) < zana_mod[ZanaMod.Level]:
-                break # Stop adding mod options if Zana level is to low to run them
+    # def addZanaMods(self):
+    #     print('Adding Zana Mods to Combo Box')
+    #     self.ui.mr_add_zana_mod.clear()
+    #     for i, zana_mod in enumerate(self.zana_mods):
+    #         self.ui.mr_add_zana_mod.addItem(zana_mod[ZanaMod.Name] + ' (' + zana_mod[ZanaMod.Cost] + ')')
+    #         if int(self.settings['ZanaDefaultModIndex']) == i:
+    #             self.ui.mr_add_zana_mod.setCurrentIndex(i)
+    #         if int(self.settings['ZanaLevel']) < zana_mod[ZanaMod.Level]:
+    #             break # Stop adding mod options if Zana level is to low to run them
 
-    def changeZanaLevel(self):
-        self.zana_mods[1][ZanaMod.IQ] = int(self.settings['ZanaLevel'])
-        self.addZanaMods()
+    # def changeZanaLevel(self):
+    #     self.zana_mods[1][ZanaMod.IQ] = int(self.settings['ZanaLevel'])
+    #     self.addZanaMods()
 
-    def changeZanaMod(self):
-        print('New Zana Mod Selected')
-        if self.mapDB.map_running:
-            self.mapDB.map_running[Map.BonusIQ] = self.calcBonusIQ()
-            zana_mod_str = self.zana_mods[self.ui.mr_add_zana_mod.currentIndex()][ZanaMod.Desc]
-            self.mapDB.map_running[Map.Mod9] = zana_mod_str
-            self.updateUiMapRunningBonuses()
-            self.ui.mr_mods.moveCursor(QtGui.QTextCursor.End)
+    # def changeZanaMod(self):
+    #     print('New Zana Mod Selected')
+    #     if self.mapDB.map_running:
+    #         self.mapDB.map_running[Map.BonusIQ] = self.calcBonusIQ()
+    #         zana_mod_str = self.zana_mods[self.ui.mr_add_zana_mod.currentIndex()][ZanaMod.Desc]
+    #         self.mapDB.map_running[Map.Mod9] = zana_mod_str
+    #         self.updateUiMapRunningBonuses()
+    #         self.ui.mr_mods.moveCursor(QtGui.QTextCursor.End)
 
-    def changeBonusIQ(self):
-        print('Bonus IQ Changed')
-        if self.mapDB.map_running:
-            self.mapDB.map_running[Map.BonusIQ] = self.calcBonusIQ()
-            self.updateUiMapRunningBonuses()
+    # def changeBonusIQ(self):
+    #     print('Bonus IQ Changed')
+    #     if self.mapDB.map_running:
+    #         self.mapDB.map_running[Map.BonusIQ] = self.calcBonusIQ()
+    #         self.updateUiMapRunningBonuses()
 
-    def calcBonusIQ(self):
-        zana_iq = self.zana_mods[self.ui.mr_add_zana_mod.currentIndex()][ZanaMod.IQ]
-        bonus_iq = self.ui.mr_add_bonus_iq.property('value') + zana_iq
-        return bonus_iq
+    # def calcBonusIQ(self):
+    #     zana_iq = self.zana_mods[self.ui.mr_add_zana_mod.currentIndex()][ZanaMod.IQ]
+    #     bonus_iq = self.ui.mr_add_bonus_iq.property('value') + zana_iq
+    #     return bonus_iq
 
-    def resetBonuses(self):
-        self.ui.mr_add_zana_mod.setCurrentIndex(-1) # force change event
-        self.ui.mr_add_zana_mod.setCurrentIndex(int(self.settings['ZanaDefaultModIndex']))
-        self.ui.mr_add_bonus_iq.setProperty('value', 0)
+    # def resetBonuses(self):
+    #     self.ui.mr_add_zana_mod.setCurrentIndex(-1) # force change event
+    #     self.ui.mr_add_zana_mod.setCurrentIndex(int(self.settings['ZanaDefaultModIndex']))
+    #     self.ui.mr_add_bonus_iq.setProperty('value', 0)
 
     def openStatFile(self):
         stat_file = self.settings['SelectedStatisticsFile']
@@ -456,7 +494,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         self.settings = readSettings()
         self.popup()
         self.thread.setMapCheckInterval(float(self.settings['MapCheckInterval']))
-        self.changeZanaLevel()
+        self.ui_addmore.updateZanaLevel()
         hour12 = self.settings['ClockHour12']
         milliseconds = self.settings['ShowMilliseconds']
         hour12 = False if hour12 == '0' else True
@@ -479,12 +517,12 @@ class MapWatchWindow(QtWidgets.QMainWindow):
 
     def buttonAccess(self, button):
         self.ui.ms_add_map.setEnabled(button[Button.Add])
-        self.ui.ms_remove_map.setEnabled(button[Button.Remove])
+        self.ui.ms_delete_map.setEnabled(button[Button.Delete])
         self.ui.mr_clear_map.setEnabled(button[Button.Clear])
         self.ui.mr_run_map.setEnabled(button[Button.Run])
         self.ui.menu_ms_add_map.setEnabled(button[Button.Add])
         self.ui.menu_ms_add_unlinked_map.setEnabled(button[Button.Add])
-        self.ui.menu_ms_remove_map.setEnabled(button[Button.Remove])
+        self.ui.menu_ms_delete_map.setEnabled(button[Button.Delete])
         self.ui.menu_mr_clear_map.setEnabled(button[Button.Clear])
         self.ui.menu_mr_run_map.setEnabled(button[Button.Run])
         self.hotkey_add.setEnabled(button[Button.Add])
@@ -584,7 +622,7 @@ class Preferences(QtWidgets.QDialog):
         self.parent = parent
         self.ui = Ui_Preferences()
         self.ui.setupUi(self)
-        self.setFixedSize(400, 342)
+        self.setFixedSize(400, 368)
         self.loadData()
         self.ui.pref_buttons.accepted.connect(self.accept)
         self.ui.pref_buttons.button(QtWidgets.QDialogButtonBox.Save).setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
@@ -593,6 +631,18 @@ class Preferences(QtWidgets.QDialog):
         self.ui.pref_buttons.button(QtWidgets.QDialogButtonBox.RestoreDefaults).clicked.connect(self.restoreDefaults)
         self.ui.pref_buttons.button(QtWidgets.QDialogButtonBox.RestoreDefaults).setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         print("Preferences Window loaded")
+
+        #self.setStyleSheet('background: rgba(0,0,255,20%)')
+        #self.setAttribute(Qt.WA_NoSystemBackground)
+        #self.setAttribute(Qt.WA_TranslucentBackground)
+        #self.setAttribute(Qt.WA_OpaquePaintEvent)
+        #self.setAttribute(Qt.WA_PaintOnScreen)
+        #self.setWindowFlags(Qt.CustomizeWindowHint|Qt.WindowCloseButtonHint|Qt.WindowStaysOnTopHint|Qt.X11BypassWindowManagerHint)
+
+        # Transparent Window
+        # self.setAttribute(Qt.WA_TranslucentBackground)
+        # self.setWindowFlags(Qt.Dialog|Qt.CustomizeWindowHint|Qt.WindowCloseButtonHint|Qt.FramelessWindowHint)
+
 
     def loadData(self):
         abs_path = os.path.abspath(os.path.dirname('__file__'))
@@ -615,9 +665,9 @@ class Preferences(QtWidgets.QDialog):
                 self.ui.pref_statistics.setCurrentIndex(i)
         self.ui.pref_hour.setChecked(int(self.parent.settings['ClockHour12']))
         self.ui.pref_millisec.setChecked(int(self.parent.settings['ShowMilliseconds']))
-        self.ui.pref_zana_level.setProperty('valse', int(self.parent.settings['ZanaLevel']))
+        self.ui.pref_zana_level.setProperty('value', int(self.parent.settings['ZanaLevel']))
         self.ui.pref_defualt_zana_mod.clear()
-        for i, zana_mod in enumerate(self.parent.zana_mods):
+        for i, zana_mod in enumerate(self.parent.ui_addmore.zana_mods):
             self.ui.pref_defualt_zana_mod.addItem(zana_mod[ZanaMod.Name] + ' (' + zana_mod[ZanaMod.Cost] + ')')
             if int(self.parent.settings['ZanaDefaultModIndex']) == i:
                 self.ui.pref_defualt_zana_mod.setCurrentIndex(i)
@@ -699,6 +749,164 @@ class About(QtWidgets.QDialog):
         webbrowser.open('https://github.com/JDHatten/MapWatch/releases')
 
 
+class AddMore(QtWidgets.QDialog):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent = parent
+        self.ui = Ui_AddMore()
+        self.ui.setupUi(self)
+        self.setFixedSize(341, 320)
+        self.zana_mods = [ # TODO: maybe load from outside source? settings.ini?
+            ['None', 'Free', 0, 0, ''],
+            ['Item Quantity', 'Free', 1, 0, '+1% Quantity Per Master Level'],
+            ['Rampage', '4x Chaos Orbs', 2, 0, 'Slaying enemies quickly grants Rampage bonuses'],
+            ['Bloodlines', '4x Chaos Orbs', 2, 15, 'Magic Monster Packs each have a Bloodline Mod'],
+            ['Anarchy', '8x Chaos Orbs', 3, 16, 'Area is inhabited by 4 additional Rogue Exiles'],
+            ['Invasion', '8x Chaos Orbs', 3, 16, 'Area is inhabited by 3 additional Invasion Bosses'],
+            ['Domination', '10x Chaos Orbs', 4, 0, 'Area Contains 5 Extra Shrines'],
+            ['Onslaught', '8x Chaos Orbs', 4, 30, '40% Increased Monster Cast & Attack Speed'],
+            ['Torment', '8x Chaos Orbs', 5, 12, 'Area spawns 3 extra Tormented Spirits (Stacks with any that naturally spawned)'],
+            ['Beyond', '12x Chaos Orbs', 5, 8, 'Slaying enemies close together can attract monsters from Beyond this realm'],
+            ['Tempest', '6x Choas Orbs', 6, 16, 'Powerful Tempests can affect both Monsters and You'],
+            ['Ambush', '12x Chaos Orbs', 6, 0, 'Area contains 4 extra Strongboxes'],
+            ['Warbands', '12x Chaos Orbs', 7, 16, 'Area is inhabited by 2 additional Warbands'],
+            ['Nemesis', '1x Exalted Orb', 7, 0, 'One Rare Per Pack, Rare Monsters Each Have A Nemesis Mod']
+        ]
+        self.curFrags = 0
+        self.curZanaMod = 0
+        self.curCartoFound = 0
+        self.curZanaFound = 0
+        self.curNotes = ''
+        self.ui.add_zana_mod.currentIndexChanged.connect(self.changeZanaMod)
+        self.ui.add_fragments.valueChanged.connect(self.changeBonusIQ)
+        self.ui.add_iq.valueChanged.connect(self.changeIQ)
+        self.ui.add_ir.valueChanged.connect(self.changeIR)
+        self.ui.add_pack_size.valueChanged.connect(self.changePackSize)
+        self.ui.buttonBox.accepted.connect(self.accept)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Save).setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Cancel).clicked.connect(self.reject)
+        self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Cancel).setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        print('Preferences Window loaded')
+
+    def updateZanaLevel(self):
+        self.zana_mods[1][ZanaMod.IQ] = int(self.parent.settings['ZanaLevel'])
+        self.loadZanaMods()
+
+    def loadZanaMods(self):
+        print('Adding Zana Mods to Combo Box')
+        self.ui.add_zana_mod.clear()
+        for i, zana_mod in enumerate(self.zana_mods):
+            self.ui.add_zana_mod.addItem(zana_mod[ZanaMod.Name] + ' (' + zana_mod[ZanaMod.Cost] + ')')
+            if int(self.parent.settings['ZanaDefaultModIndex']) == i:
+                self.ui.add_zana_mod.setCurrentIndex(i)
+            if int(self.parent.settings['ZanaLevel']) < zana_mod[ZanaMod.Level]:
+                break # Stop adding mod options if Zana level is to low to run them
+
+    def changeZanaMod(self):
+        pass
+        #self.parent.ui.mr_mods.moveCursor(QtGui.QTextCursor.End)
+
+    def changeBonusIQ(self):
+        pass
+
+    def calcBonusIQ(self):
+        zana_iq = self.zana_mods[self.ui.add_zana_mod.currentIndex()][ZanaMod.IQ]
+        bonus_iq = self.ui.add_fragments.property('value') * 5 + zana_iq
+        return bonus_iq
+
+    def changeIQ(self):
+        pass
+
+    def changeIR(self):
+        pass
+
+    def changePackSize(self):
+        pass
+
+    def reset(self, defualts=False):
+        iq = 0
+        ir = 0
+        ps = 0
+        frags = 0
+        if defualts:
+            self.ui.add_zana_mod.setCurrentIndex(-1) # force change event
+            self.curZanaMod = int(self.parent.settings['ZanaDefaultModIndex'])
+            self.ui.add_zana_mod.setCurrentIndex(self.curZanaMod)
+            self.ui.add_fragments.setProperty('value', frags)
+            if Map.Mod1 in self.parent.mapDB.map_running and self.parent.mapDB.map_running[Map.Mod1] == 'Unidentified':
+                self.ui.add_iq.setMinimum(30)
+                self.ui.add_iq.setProperty('value', 30)
+                self.ui.add_iq.setEnabled(True)
+                self.ui.add_iq.setProperty('value', 0)
+                self.ui.add_ir.setEnabled(True)
+                self.ui.add_iq.setProperty('value', 0)
+                self.ui.add_pack_size.setEnabled(True)
+            else:
+                if Map.IQ in self.parent.mapDB.map_running:
+                    iq = self.parent.mapDB.map_running[Map.IQ]
+                self.ui.add_iq.setProperty('value', iq) #TODO: this is not showing the current IQ
+                self.ui.add_iq.setEnabled(False)
+                if Map.IR in self.parent.mapDB.map_running:
+                    ir = self.parent.mapDB.map_running[Map.IR]
+                self.ui.add_iq.setProperty('value', ir)
+                self.ui.add_ir.setEnabled(False)
+                if Map.PackSize in self.parent.mapDB.map_running:
+                    ps = self.parent.mapDB.map_running[Map.PackSize]
+                self.ui.add_iq.setProperty('value', ps)
+                self.ui.add_pack_size.setEnabled(False)
+            if self.parent.mapDB.map_type_running == MapType.Fragment or self.parent.mapDB.map_type_running == MapType.RareFragment:
+                self.ui.add_fragments.setEnabled(False)
+            else:
+                self.ui.add_fragments.setEnabled(True)
+        else:
+            if Map.IQ in self.parent.mapDB.map_running:
+                iq = self.parent.mapDB.map_running[Map.IQ]
+            self.ui.add_iq.setProperty('value', iq)
+            if Map.IR in self.parent.mapDB.map_running:
+                ir = self.parent.mapDB.map_running[Map.IR]
+            self.ui.add_iq.setProperty('value', ir)
+            if Map.PackSize in self.parent.mapDB.map_running:
+                ps = self.parent.mapDB.map_running[Map.PackSize]
+            self.ui.add_iq.setProperty('value', ps)
+            if Map.Fragments in self.parent.mapDB.map_running:
+                frags = self.parent.mapDB.map_running[Map.Fragments]
+            self.ui.add_fragments.setProperty('value', frags)
+            self.ui.add_zana_mod.setCurrentIndex(self.curZanaMod)
+            self.ui.carto_box.setChecked(self.curCartoFound)
+            self.ui.zana_box.setChecked(self.curZanaFound)
+            self.ui.map_notes.setPlainText(self.curNotes)
+
+    def restoreDefaults(self):
+        self.parent.ui_confirm.boxType('confirm')
+        if self.parent.ui_confirm.exec_('Restore Defaults?', 'Are you sure you want to restore the default settings?'):
+            get_defaults = True
+            self.parent.settings = readSettings(get_defaults)
+            self.insertPrefs()
+
+    def accept(self):
+        if self.parent.mapDB.map_running:
+            self.parent.mapDB.map_running[Map.IQ] = self.ui.add_iq.property('value')
+            self.parent.mapDB.map_running[Map.IR] = self.ui.add_ir.property('value')
+            self.parent.mapDB.map_running[Map.PackSize] = self.ui.add_pack_size.property('value')
+            self.parent.mapDB.map_running[Map.Fragments] = self.ui.add_fragments.property('value')
+            self.parent.mapDB.map_running[Map.BonusIQ] = self.calcBonusIQ()
+            self.curZanaMod = self.ui.add_zana_mod.currentIndex()
+            self.curCartoFound = self.ui.carto_box.checkState()
+            self.curZanaFound = self.ui.zana_box.checkState()
+            self.curNotes = self.ui.map_notes.toPlainText()
+            self.parent.mapDB.map_running[Map.ZanaMod] = self.zana_mods[self.curZanaMod][ZanaMod.Desc]
+            self.parent.mapDB.map_running[Map.CartoFound] = self.curCartoFound
+            self.parent.mapDB.map_running[Map.ZanaFound] = self.curZanaFound
+            self.parent.mapDB.map_running[Map.Notes] = self.curNotes
+        super().accept()
+
+    def exec_(self):
+        if self.parent.mapDB.map_running:
+            self.reset()
+        return super().exec_()
+
+
 class MapWatcher(QThread):
 
     trigger = pyqtSignal(object)
@@ -708,6 +916,8 @@ class MapWatcher(QThread):
         self.exiting = False
         self.check_interval = 2.0
         self.map_type = MapType.Standard
+        self.map_check_str = r'\r?\n--------\r?\nTravel to this Map by using it in the Eternal Laboratory or a personal Map Device\. Maps can only be used once\.'
+        self.fragment_check_str = r'\r?\n--------\r?\nCan be used in the Eternal Laboratory or a personal Map Device\.'
         # I don't know how to include some of these within the current map tier system, 0,-1,-2 ?
         # How would they compare in statistics? Not sure about this anymore.
         # self.fragments = [
@@ -743,8 +953,13 @@ class MapWatcher(QThread):
         self.wait()
         super().__del__(self)
 
-    def runLoop(self):
+    def runLoop(self, running):
         self.start()
+
+    def pause(self, pause):
+        self.exiting = pause
+        if not pause:
+            self.start()
 
     def setMapCheckInterval(self, seconds):
         self.check_interval = seconds
@@ -808,12 +1023,10 @@ class MapWatcher(QThread):
 
     # Note: This is never called directly. It is called by Qt once the thread environment has been set up.
     def run(self):
-        map_check_str = r'\r?\n--------\r?\nTravel to this Map by using it in the Eternal Laboratory or a personal Map Device\. Maps can only be used once\.'
-        fragment_check_str = r'\r?\n--------\r?\nCan be used in the Eternal Laboratory or a personal Map Device\.'
         while not self.exiting:
             copied_data = pyperclip.paste()
             if copied_data:
-                if re.search(map_check_str, copied_data) and not re.search(r'Map Watch Time Stamp:', copied_data): # Ignore maps already checked with Time Stamp
+                if re.search(self.map_check_str, copied_data) and not re.search(r'Map Watch Time Stamp:', copied_data): # Ignore maps already checked with Time Stamp
                     print('====Found a Map====')
                     # Add time stamp to every map found
                     time_stamp = '========\r\nMap Watch Time Stamp: ' + str(time.time()) + '\r\n========\r\n'
@@ -826,13 +1039,13 @@ class MapWatcher(QThread):
                     if (extra_text):
                         copied_data = copied_data.replace(extra_text.group(1), '')
                     else:
-                        copied_data = re.sub(map_check_str, '', copied_data)
+                        copied_data = re.sub(self.map_check_str, '', copied_data)
                     # Trim all new lines at end, just in case
                     while copied_data[-1:] == '\n':
                         print('Trimming \\n')
                         copied_data = copied_data[:-1]
                     self.parseMapData(copied_data)
-                elif re.search(fragment_check_str, copied_data) and not re.search(r'Map Watch Time Stamp:', copied_data):
+                elif re.search(self.fragment_check_str, copied_data) and not re.search(r'Map Watch Time Stamp:', copied_data):
                     print('====Found a Fragment====')
                     # Add time stamp to every fragment found
                     time_stamp = '========\r\nMap Watch Time Stamp: ' + str(time.time()) + '\r\n========\r\n'
@@ -849,8 +1062,11 @@ class MapDatabase(object):
         self.parent = parent
         self.table_names = ['Maps_Dropped','Maps_Ran']
         self.unique_col_name = 'Time_Stamp_ID'
-        self.column_names = [['Name','Tier','IQ','IR','Pack_Size','Rarity','Mod1','Mod2','Mod3','Mod4','Mod5','Mod6','Mod7','Mod8','Mod9','Dropped_In_ID'],
-                            ['Name','Tier','IQ','Bonus_IQ','IR','Pack_Size','Rarity','Mod1','Mod2','Mod3','Mod4','Mod5','Mod6','Mod7','Mod8','Mod9','Time_Cleared']]
+        self.column_names = [['Dropped_In_ID','Name','Tier','IQ','IR','Pack_Size','Rarity',
+                                'Mod1','Mod2','Mod3','Mod4','Mod5','Mod6','Mod7','Mod8','Mod9','Mod10','Mod11','Mod12'],
+                            ['Time_Cleared','Name','Tier','IQ','Bonus_IQ','IR','Pack_Size','Rarity',
+                                'Mod1','Mod2','Mod3','Mod4','Mod5','Mod6','Mod7','Mod8','Mod9','Mod10','Mod11','Mod12',
+                                'Zana_Mod','League','Fragments','Carto_Found','Zana_Found','Notes']]
         self.map_running = None
         self.map_type_running = MapType.Standard
         self.db_file = None
@@ -907,7 +1123,7 @@ class MapDatabase(object):
                 else:
                     self.c.execute("UPDATE {tn} SET {cn}=({val}) WHERE {kcn}=({key})".format(
                             tn=self.table_names[Maps.Dropped],
-                            cn=self.column_names[Maps.Dropped][int(field)-1],
+                            cn=self.column_names[Maps.Dropped][int(field)],
                             kcn=self.unique_col_name,
                             val='\"'+value+'\"',
                             key=map[Map.TimeAdded]
@@ -916,7 +1132,7 @@ class MapDatabase(object):
             if self.map_running and not unlinked:
                 self.c.execute("UPDATE {tn} SET {cn}=({val}) WHERE {kcn}=({key})".format(
                         tn=self.table_names[Maps.Dropped],
-                        cn=self.column_names[Maps.Dropped][15], # Dropped_In_ID
+                        cn=self.column_names[Maps.Dropped][0], # Dropped_In_ID
                         kcn=self.unique_col_name,
                         val=self.map_running[Map.TimeAdded],
                         key=map[Map.TimeAdded]
@@ -926,7 +1142,7 @@ class MapDatabase(object):
             print('Map added to database')
         except sqlite3.IntegrityError:
             self.parent.error('Error: Database record already exists.',
-                {"This map has already been added to the database. If you want you may remove (delete) it and re-add it though."})
+                {"This map has already been added to the database. If you want you may delete it and re-add it though."})
         except:
             self.parent.error('Error: Database record could not be created.', sys.exc_info())
         self.closeDB()
@@ -954,7 +1170,7 @@ class MapDatabase(object):
                 else:
                     self.c.execute("UPDATE {tn} SET {cn}=({val}) WHERE {kcn}=({key})".format(
                             tn=self.table_names[Maps.Ran],
-                            cn=self.column_names[Maps.Ran][int(field)-1],
+                            cn=self.column_names[Maps.Ran][int(field)],
                             kcn=self.unique_col_name,
                             val='\"'+value+'\"',
                             key=map[Map.TimeAdded]
@@ -973,7 +1189,28 @@ class MapDatabase(object):
             print('updateMapRunning')
             self.openDB()
             try:
-                for col, i in {'Bonus_IQ': Map.BonusIQ, 'Mod9': Map.Mod9}.items():
+                if self.map_running[Map.Mod1] == 'Unidentified':
+                    update_cols = {
+                        'IQ': Map.IQ,
+                        'IR': Map.IR,
+                        'Pack_Size': Map.PackSize,
+                        'Bonus_IQ': Map.BonusIQ,
+                        'Zana_Mod': Map.ZanaMod,
+                        'Fragments': Map.Fragments,
+                        'Carto_Found': Map.CartoFound,
+                        'Zana_Found': Map.ZanaFound,
+                        'Notes': Map.Notes
+                    }.items()
+                else:
+                    update_cols = {
+                        'Bonus_IQ': Map.BonusIQ,
+                        'Zana_Mod': Map.ZanaMod,
+                        'Fragments': Map.Fragments,
+                        'Carto_Found': Map.CartoFound,
+                        'Zana_Found': Map.ZanaFound,
+                        'Notes': Map.Notes
+                    }.items()
+                for col, i in update_cols:
                     self.c.execute("UPDATE {tn} SET {cn}=({val}) WHERE {kcn}=({key})".format(
                             tn=self.table_names[Maps.Ran],
                             cn=str(col),
@@ -996,7 +1233,7 @@ class MapDatabase(object):
                 # Add time map cleared
                 self.c.execute("UPDATE {tn} SET {cn}=({val}) WHERE {kcn}=({key})".format(
                         tn=self.table_names[Maps.Ran],
-                        cn=self.column_names[Maps.Ran][16], # Time_Cleared
+                        cn=self.column_names[Maps.Ran][0], # Time_Cleared
                         kcn=self.unique_col_name,
                         val=clear_time,
                         key=self.map_running[Map.TimeAdded]
@@ -1005,7 +1242,7 @@ class MapDatabase(object):
                 # Any map drops in this map?
                 self.c.execute("SELECT * FROM {tn} WHERE {kcn} = (SELECT MAX({mr_kcn}) FROM {mr_tn})".format(
                         tn=self.table_names[Maps.Dropped],
-                        kcn=self.column_names[Maps.Dropped][15], # Dropped_In_ID
+                        kcn=self.column_names[Maps.Dropped][0], # Dropped_In_ID
                         mr_kcn=self.unique_col_name,
                         mr_tn=self.table_names[Maps.Ran]
                     ))
@@ -1021,8 +1258,8 @@ class MapDatabase(object):
                     map_name = self.deleteLastMap(Maps.Ran)
                     if map_name:
                         self.parent.sysTrayIcon.showMessage(
-                            'Last Map Ran Removed',
-                            map_name+' was removed from the database.',
+                            'Last Map Ran Deleted',
+                            map_name+' was deleted from the database.',
                             1, 1000)
             self.closeDB()
         else:
@@ -1052,10 +1289,16 @@ class MapDatabase(object):
         if not db_struct_check:
             print('Setting up new map database.')
             if os.path.exists(file):
-                os.unlink(file) # Overwrite old file
+                try:
+                    # Overwrite old file
+                    os.unlink(file)
+                except:
+                    self.parent.error('Error: Database could not be created.', sys.exc_info())
+                    return False
             self.setDBFile(file)
         else:
             print('Checking database structure.')
+        diff_struct = False
         self.openDB()
         for i, tname in enumerate(self.table_names):
             # Create a map table with unique Time_Stamp column
@@ -1068,10 +1311,13 @@ class MapDatabase(object):
             existing_columns = []
             for excol in self.c.fetchall():
                 existing_columns.append(excol[1])
+            # Check if database structure is different
+            if existing_columns[1:] != self.column_names[i]:
+                diff_struct = True
             # Create columns if they don't already exist
             for col in self.column_names[i]:
                 if col not in existing_columns:
-                    if col in ['Tier','IQ','Bonus_IQ','IR','Pack_Size']:
+                    if col in ['Tier','IQ','Bonus_IQ','IR','Pack_Size','Fragments','Carto_Found','Zana_Found']:
                         col_type = 'INTEGER'
                     elif col in ['Dropped_In_ID','Time_Cleared']:
                         col_type = 'REAL'
@@ -1084,6 +1330,12 @@ class MapDatabase(object):
                         ))
         self.conn.commit()
         self.closeDB()
+        if diff_struct and db_struct_check:
+            self.parent.ui_confirm.boxType('error')
+            self.parent.ui_confirm.exec_('Older DB File Detected',
+                                        'An older database file from a previous version of Map Watch detected, and is no longer compatible.  '+
+                                        'It is recommended you start a new database file.')
+        return True
 
 
 def writeSettings(settings, defaults=None):
