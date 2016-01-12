@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>471</width>
-    <height>413</height>
+    <height>382</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -30,6 +30,9 @@
   </property>
   <property name="windowTitle">
    <string>Map Watch</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true"/>
   </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QGroupBox" name="map_selected">
@@ -194,7 +197,7 @@ p, li { white-space: pre-wrap; }
       <string>Add to Map Drops</string>
      </property>
     </widget>
-    <widget class="QPushButton" name="ms_remove_map">
+    <widget class="QPushButton" name="ms_delete_map">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -210,7 +213,7 @@ p, li { white-space: pre-wrap; }
       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Remove the last map added. You may remove more than one with continuous clicks.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="text">
-      <string>Remove Last Map Added</string>
+      <string>Delete Last Map Added</string>
      </property>
     </widget>
     <widget class="QLabel" name="ms_tier">
@@ -329,7 +332,7 @@ p, li { white-space: pre-wrap; }
       <x>0</x>
       <y>180</y>
       <width>471</width>
-      <height>211</height>
+      <height>181</height>
      </rect>
     </property>
     <property name="contextMenuPolicy">
@@ -471,8 +474,8 @@ p, li { white-space: pre-wrap; }
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>180</y>
-       <width>201</width>
+       <y>150</y>
+       <width>141</width>
        <height>23</height>
       </rect>
      </property>
@@ -489,9 +492,9 @@ p, li { white-space: pre-wrap; }
     <widget class="QPushButton" name="mr_run_map">
      <property name="geometry">
       <rect>
-       <x>260</x>
-       <y>180</y>
-       <width>201</width>
+       <x>320</x>
+       <y>150</y>
+       <width>141</width>
        <height>23</height>
       </rect>
      </property>
@@ -583,47 +586,6 @@ p, li { white-space: pre-wrap; }
       <string/>
      </property>
     </widget>
-    <widget class="QComboBox" name="mr_add_zana_mod">
-     <property name="geometry">
-      <rect>
-       <x>100</x>
-       <y>150</y>
-       <width>201</width>
-       <height>23</height>
-      </rect>
-     </property>
-     <property name="cursor">
-      <cursorShape>PointingHandCursor</cursorShape>
-     </property>
-    </widget>
-    <widget class="QSpinBox" name="mr_add_bonus_iq">
-     <property name="geometry">
-      <rect>
-       <x>420</x>
-       <y>150</y>
-       <width>42</width>
-       <height>23</height>
-      </rect>
-     </property>
-     <property name="cursor">
-      <cursorShape>PointingHandCursor</cursorShape>
-     </property>
-     <property name="readOnly">
-      <bool>false</bool>
-     </property>
-     <property name="keyboardTracking">
-      <bool>true</bool>
-     </property>
-     <property name="showGroupSeparator" stdset="0">
-      <bool>false</bool>
-     </property>
-     <property name="maximum">
-      <number>15</number>
-     </property>
-     <property name="singleStep">
-      <number>5</number>
-     </property>
-    </widget>
     <widget class="QLabel" name="mr_bonus_iq">
      <property name="geometry">
       <rect>
@@ -637,30 +599,20 @@ p, li { white-space: pre-wrap; }
       <string/>
      </property>
     </widget>
-    <widget class="QLabel" name="label_14">
+    <widget class="QPushButton" name="mr_add_more">
      <property name="geometry">
       <rect>
-       <x>310</x>
-       <y>152</y>
-       <width>101</width>
-       <height>16</height>
+       <x>170</x>
+       <y>150</y>
+       <width>131</width>
+       <height>23</height>
       </rect>
      </property>
-     <property name="text">
-      <string>Add Bonus Quantity:</string>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label_15">
-     <property name="geometry">
-      <rect>
-       <x>20</x>
-       <y>152</y>
-       <width>81</width>
-       <height>16</height>
-      </rect>
+     <property name="cursor">
+      <cursorShape>PointingHandCursor</cursorShape>
      </property>
      <property name="text">
-      <string>Add Zana Mod:</string>
+      <string>Add More Map Data</string>
      </property>
     </widget>
    </widget>
@@ -688,6 +640,7 @@ p, li { white-space: pre-wrap; }
     <property name="title">
      <string>&amp;Settings</string>
     </property>
+    <addaction name="menu_pause"/>
     <addaction name="menu_preferences"/>
    </widget>
    <widget class="QMenu" name="menu_Help">
@@ -702,9 +655,10 @@ p, li { white-space: pre-wrap; }
     </property>
     <addaction name="menu_ms_add_map"/>
     <addaction name="menu_ms_add_unlinked_map"/>
-    <addaction name="menu_ms_remove_map"/>
+    <addaction name="menu_ms_delete_map"/>
     <addaction name="menu_mr_run_map"/>
     <addaction name="menu_mr_clear_map"/>
+    <addaction name="menu_mr_add_more"/>
    </widget>
    <addaction name="menu_File"/>
    <addaction name="menu_Edit"/>
@@ -752,9 +706,9 @@ p, li { white-space: pre-wrap; }
     <string>&amp;Add Selected Map</string>
    </property>
   </action>
-  <action name="menu_ms_remove_map">
+  <action name="menu_ms_delete_map">
    <property name="text">
-    <string>Remove &amp;Last Map</string>
+    <string>&amp;Delete Last Map</string>
    </property>
   </action>
   <action name="menu_mr_run_map">
@@ -770,6 +724,16 @@ p, li { white-space: pre-wrap; }
   <action name="menu_open_stats">
    <property name="text">
     <string>Open &amp;Statistics File</string>
+   </property>
+  </action>
+  <action name="menu_pause">
+   <property name="text">
+    <string>&amp;Stop Map Watching</string>
+   </property>
+  </action>
+  <action name="menu_mr_add_more">
+   <property name="text">
+    <string>Add &amp;More Map Data</string>
    </property>
   </action>
  </widget>
