@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>342</height>
+    <height>368</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -42,7 +42,7 @@
     <rect>
      <x>170</x>
      <y>110</y>
-     <width>131</width>
+     <width>211</width>
      <height>21</height>
     </rect>
    </property>
@@ -128,7 +128,7 @@
    <property name="geometry">
     <rect>
      <x>6</x>
-     <y>10</y>
+     <y>7</y>
      <width>241</width>
      <height>21</height>
     </rect>
@@ -208,7 +208,7 @@
     <rect>
      <x>170</x>
      <y>140</y>
-     <width>131</width>
+     <width>211</width>
      <height>21</height>
     </rect>
    </property>
@@ -226,7 +226,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>310</y>
+     <y>336</y>
      <width>381</width>
      <height>23</height>
     </rect>
@@ -242,7 +242,7 @@
    <property name="geometry">
     <rect>
      <x>5</x>
-     <y>290</y>
+     <y>316</y>
      <width>388</width>
      <height>16</height>
     </rect>
@@ -255,7 +255,7 @@
    <property name="geometry">
     <rect>
      <x>16</x>
-     <y>200</y>
+     <y>230</y>
      <width>141</width>
      <height>21</height>
     </rect>
@@ -279,7 +279,7 @@
    <property name="geometry">
     <rect>
      <x>170</x>
-     <y>200</y>
+     <y>230</y>
      <width>41</width>
      <height>21</height>
     </rect>
@@ -309,7 +309,7 @@
    <property name="geometry">
     <rect>
      <x>16</x>
-     <y>230</y>
+     <y>260</y>
      <width>141</width>
      <height>21</height>
     </rect>
@@ -330,8 +330,8 @@
    <property name="geometry">
     <rect>
      <x>170</x>
-     <y>230</y>
-     <width>201</width>
+     <y>260</y>
+     <width>211</width>
      <height>23</height>
     </rect>
    </property>
@@ -427,7 +427,7 @@
    <property name="geometry">
     <rect>
      <x>90</x>
-     <y>260</y>
+     <y>290</y>
      <width>221</width>
      <height>21</height>
     </rect>
@@ -479,6 +479,49 @@
    </property>
    <property name="value">
     <double>2.000000000000000</double>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_9">
+   <property name="geometry">
+    <rect>
+     <x>16</x>
+     <y>200</y>
+     <width>141</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>10</pointsize>
+    </font>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:8pt;&quot;&gt;The level of your Master Zana will affect which mods you can use and how much bonus IQ you get from the first mod. &lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+   <property name="text">
+    <string>Defualt League:</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+   </property>
+  </widget>
+  <widget class="QComboBox" name="pref_defualt_league">
+   <property name="geometry">
+    <rect>
+     <x>170</x>
+     <y>200</y>
+     <width>211</width>
+     <height>23</height>
+    </rect>
+   </property>
+   <property name="cursor">
+    <cursorShape>PointingHandCursor</cursorShape>
+   </property>
+   <property name="currentText">
+    <string/>
+   </property>
+   <property name="maxVisibleItems">
+    <number>10</number>
    </property>
   </widget>
  </widget>
