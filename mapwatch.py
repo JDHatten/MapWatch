@@ -494,6 +494,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         self.settings = readSettings()
         self.popup()
         self.thread.setMapCheckInterval(float(self.settings['MapCheckInterval']))
+        self.ui_addmore.loadLeagues()
         self.ui_addmore.updateZanaLevel()
         hour12 = self.settings['ClockHour12']
         milliseconds = self.settings['ShowMilliseconds']
@@ -623,6 +624,8 @@ class Preferences(QtWidgets.QDialog):
         self.ui = Ui_Preferences()
         self.ui.setupUi(self)
         self.setFixedSize(400, 368)
+        self.statistics_files = []
+        self.leagues = []
         self.loadData()
         self.ui.pref_buttons.accepted.connect(self.accept)
         self.ui.pref_buttons.button(QtWidgets.QDialogButtonBox.Save).setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
@@ -648,11 +651,13 @@ class Preferences(QtWidgets.QDialog):
         abs_path = os.path.abspath(os.path.dirname('__file__'))
         statistics_dir = abs_path+'\\statistics\\'
         file_names = os.listdir(statistics_dir)
-        self.statistics_files = []
         for file_name in file_names:
             match = re.search(r'\w+\.html', file_name)
             if match:
                 self.statistics_files.append(statistics_dir+file_name)
+        leagues = readData('Leagues')
+        for league in leagues:
+            self.leagues.append(leagues[str(league)])
 
     def insertPrefs(self):
         self.ui.pref_map_check.setProperty('value', float(self.parent.settings['MapCheckInterval']))
@@ -665,6 +670,11 @@ class Preferences(QtWidgets.QDialog):
                 self.ui.pref_statistics.setCurrentIndex(i)
         self.ui.pref_hour.setChecked(int(self.parent.settings['ClockHour12']))
         self.ui.pref_millisec.setChecked(int(self.parent.settings['ShowMilliseconds']))
+        self.ui.pref_defualt_league.clear()
+        for i, league in enumerate(self.leagues):
+            self.ui.pref_defualt_league.addItem(league)
+            if self.parent.settings['DefualtLeague'] == league:
+                self.ui.pref_defualt_league.setCurrentIndex(i)
         self.ui.pref_zana_level.setProperty('value', int(self.parent.settings['ZanaLevel']))
         self.ui.pref_defualt_zana_mod.clear()
         for i, zana_mod in enumerate(self.parent.ui_addmore.zana_mods):
@@ -688,6 +698,7 @@ class Preferences(QtWidgets.QDialog):
         self.parent.settings['SelectedStatisticsFile'] = self.statistics_files[self.ui.pref_statistics.currentIndex()]
         self.parent.settings['ClockHour12'] = str(self.ui.pref_hour.checkState())
         self.parent.settings['ShowMilliseconds'] = str(self.ui.pref_millisec.checkState())
+        self.parent.settings['DefualtLeague'] = self.ui.pref_defualt_league.currentText()
         self.parent.settings['ZanaLevel'] = str(self.ui.pref_zana_level.property('value'))
         self.parent.settings['ZanaDefaultModIndex'] = str(self.ui.pref_defualt_zana_mod.currentIndex())
         self.parent.settings['AlwaysOnTop'] = str(self.ui.pref_on_top.checkState())
@@ -757,22 +768,26 @@ class AddMore(QtWidgets.QDialog):
         self.ui = Ui_AddMore()
         self.ui.setupUi(self)
         self.setFixedSize(341, 320)
-        self.zana_mods = [ # TODO: maybe load from outside source? settings.ini?
-            ['None', 'Free', 0, 0, ''],
-            ['Item Quantity', 'Free', 1, 0, '+1% Quantity Per Master Level'],
-            ['Rampage', '4x Chaos Orbs', 2, 0, 'Slaying enemies quickly grants Rampage bonuses'],
-            ['Bloodlines', '4x Chaos Orbs', 2, 15, 'Magic Monster Packs each have a Bloodline Mod'],
-            ['Anarchy', '8x Chaos Orbs', 3, 16, 'Area is inhabited by 4 additional Rogue Exiles'],
-            ['Invasion', '8x Chaos Orbs', 3, 16, 'Area is inhabited by 3 additional Invasion Bosses'],
-            ['Domination', '10x Chaos Orbs', 4, 0, 'Area Contains 5 Extra Shrines'],
-            ['Onslaught', '8x Chaos Orbs', 4, 30, '40% Increased Monster Cast & Attack Speed'],
-            ['Torment', '8x Chaos Orbs', 5, 12, 'Area spawns 3 extra Tormented Spirits (Stacks with any that naturally spawned)'],
-            ['Beyond', '12x Chaos Orbs', 5, 8, 'Slaying enemies close together can attract monsters from Beyond this realm'],
-            ['Tempest', '6x Choas Orbs', 6, 16, 'Powerful Tempests can affect both Monsters and You'],
-            ['Ambush', '12x Chaos Orbs', 6, 0, 'Area contains 4 extra Strongboxes'],
-            ['Warbands', '12x Chaos Orbs', 7, 16, 'Area is inhabited by 2 additional Warbands'],
-            ['Nemesis', '1x Exalted Orb', 7, 0, 'One Rare Per Pack, Rare Monsters Each Have A Nemesis Mod']
-        ]
+        # self.zana_mods = [ # TODO: maybe load from outside source? settings.ini?
+        #     ['None', 'Free', 0, 0, ''],
+        #     ['Item Quantity', 'Free', 1, 0, '+1% Quantity Per Master Level'],
+        #     ['Rampage', '4x Chaos Orbs', 2, 0, 'Slaying enemies quickly grants Rampage bonuses'],
+        #     ['Bloodlines', '4x Chaos Orbs', 2, 15, 'Magic Monster Packs each have a Bloodline Mod'],
+        #     ['Anarchy', '8x Chaos Orbs', 3, 16, 'Area is inhabited by 4 additional Rogue Exiles'],
+        #     ['Invasion', '8x Chaos Orbs', 3, 16, 'Area is inhabited by 3 additional Invasion Bosses'],
+        #     ['Domination', '10x Chaos Orbs', 4, 0, 'Area Contains 5 Extra Shrines'],
+        #     ['Onslaught', '8x Chaos Orbs', 4, 30, '40% Increased Monster Cast & Attack Speed'],
+        #     ['Torment', '8x Chaos Orbs', 5, 12, 'Area spawns 3 extra Tormented Spirits (Stacks with any that naturally spawned)'],
+        #     ['Beyond', '12x Chaos Orbs', 5, 8, 'Slaying enemies close together can attract monsters from Beyond this realm'],
+        #     ['Tempest', '6x Choas Orbs', 6, 16, 'Powerful Tempests can affect both Monsters and You'],
+        #     ['Ambush', '12x Chaos Orbs', 6, 0, 'Area contains 4 extra Strongboxes'],
+        #     ['Warbands', '12x Chaos Orbs', 7, 16, 'Area is inhabited by 2 additional Warbands'],
+        #     ['Nemesis', '1x Exalted Orb', 7, 0, 'One Rare Per Pack, Rare Monsters Each Have A Nemesis Mod']
+        # ]
+        self.zana_mods = []
+        self.curLeague = 0
+        self.leagues = []
+        self.loadExternalData()
         self.curFrags = 0
         self.curZanaMod = 0
         self.curCartoFound = 0
@@ -789,6 +804,24 @@ class AddMore(QtWidgets.QDialog):
         self.ui.buttonBox.button(QtWidgets.QDialogButtonBox.Cancel).setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
         print('Preferences Window loaded')
 
+    def loadExternalData(self):
+        zanamods = readData('Zanamods')
+        for mod in zanamods:
+            self.zana_mods.append([x.strip() for x in zanamods[str(mod)].split(',')])
+        #print(self.zana_mods)
+        leagues = readData('Leagues')
+        for league in leagues:
+            self.leagues.append(leagues[str(league)])
+        #print(self.leagues)
+
+    def loadLeagues(self):
+        print('Adding Leagues to Combo Box')
+        self.ui.add_league.clear()
+        for i, league in enumerate(self.leagues):
+            self.ui.add_league.addItem(league)
+            if self.parent.settings['DefualtLeague'] == league:
+                self.ui.add_league.setCurrentIndex(i)
+
     def updateZanaLevel(self):
         self.zana_mods[1][ZanaMod.IQ] = int(self.parent.settings['ZanaLevel'])
         self.loadZanaMods()
@@ -800,7 +833,7 @@ class AddMore(QtWidgets.QDialog):
             self.ui.add_zana_mod.addItem(zana_mod[ZanaMod.Name] + ' (' + zana_mod[ZanaMod.Cost] + ')')
             if int(self.parent.settings['ZanaDefaultModIndex']) == i:
                 self.ui.add_zana_mod.setCurrentIndex(i)
-            if int(self.parent.settings['ZanaLevel']) < zana_mod[ZanaMod.Level]:
+            if int(self.parent.settings['ZanaLevel']) < int(zana_mod[ZanaMod.Level]):
                 break # Stop adding mod options if Zana level is to low to run them
 
     def changeZanaMod(self):
@@ -811,7 +844,7 @@ class AddMore(QtWidgets.QDialog):
         pass
 
     def calcBonusIQ(self):
-        zana_iq = self.zana_mods[self.ui.add_zana_mod.currentIndex()][ZanaMod.IQ]
+        zana_iq = int(self.zana_mods[self.ui.add_zana_mod.currentIndex()][ZanaMod.IQ])
         bonus_iq = self.ui.add_fragments.property('value') * 5 + zana_iq
         return bonus_iq
 
@@ -830,6 +863,8 @@ class AddMore(QtWidgets.QDialog):
         ps = 0
         frags = 0
         if defualts:
+            self.curLeague = self.ui.add_league.findText(self.parent.settings['DefualtLeague'])
+            self.parent.mapDB.map_running[Map.League] = self.parent.settings['DefualtLeague']
             self.ui.add_zana_mod.setCurrentIndex(-1) # force change event
             self.curZanaMod = int(self.parent.settings['ZanaDefaultModIndex'])
             self.ui.add_zana_mod.setCurrentIndex(self.curZanaMod)
@@ -872,6 +907,7 @@ class AddMore(QtWidgets.QDialog):
             if Map.Fragments in self.parent.mapDB.map_running:
                 frags = self.parent.mapDB.map_running[Map.Fragments]
             self.ui.add_fragments.setProperty('value', frags)
+            self.ui.add_league.setCurrentIndex(self.curLeague)
             self.ui.add_zana_mod.setCurrentIndex(self.curZanaMod)
             self.ui.carto_box.setChecked(self.curCartoFound)
             self.ui.zana_box.setChecked(self.curZanaFound)
@@ -891,6 +927,8 @@ class AddMore(QtWidgets.QDialog):
             self.parent.mapDB.map_running[Map.PackSize] = self.ui.add_pack_size.property('value')
             self.parent.mapDB.map_running[Map.Fragments] = self.ui.add_fragments.property('value')
             self.parent.mapDB.map_running[Map.BonusIQ] = self.calcBonusIQ()
+            self.curLeague = self.ui.add_league.currentIndex()
+            self.parent.mapDB.map_running[Map.League] = self.leagues[self.curLeague]
             self.curZanaMod = self.ui.add_zana_mod.currentIndex()
             self.curCartoFound = self.ui.carto_box.checkState()
             self.curZanaFound = self.ui.zana_box.checkState()
@@ -1195,6 +1233,7 @@ class MapDatabase(object):
                         'IR': Map.IR,
                         'Pack_Size': Map.PackSize,
                         'Bonus_IQ': Map.BonusIQ,
+                        'League': Map.League,
                         'Zana_Mod': Map.ZanaMod,
                         'Fragments': Map.Fragments,
                         'Carto_Found': Map.CartoFound,
@@ -1204,6 +1243,7 @@ class MapDatabase(object):
                 else:
                     update_cols = {
                         'Bonus_IQ': Map.BonusIQ,
+                        'League': Map.League,
                         'Zana_Mod': Map.ZanaMod,
                         'Fragments': Map.Fragments,
                         'Carto_Found': Map.CartoFound,
@@ -1393,6 +1433,7 @@ def settingDefaults():
             'SelectedStatisticsFile': abs_path+'\\statistics\\stat_file_01.html',
             'ShowMilliseconds': '0',
             'ClockHour12': '2',
+            'DefualtLeague': 'Standard',
             'ZanaLevel': '8',
             'ZanaDefaultModIndex': '1'
             }
@@ -1405,6 +1446,20 @@ def writeSettingsJS(settings):
     settings = 'var settings = '+settings
     with open('js\settings.js', 'w') as outfile:
         outfile.write(settings)
+
+
+def readData(data='all'):
+    config = configparser.ConfigParser()
+    if config.read('data.ini'):
+        if data == 'all':
+            return config
+        if data == 'Zanamods':
+            return config['ZANAMODS']
+        elif data == 'Leagues':
+            return config['LEAGUES']
+    else:
+        print('No data file found.')
+        return None
 
 
 def main():
