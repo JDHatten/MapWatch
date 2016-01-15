@@ -32,31 +32,40 @@ from counter import Ui_Counter
 
 class Map():
     TimeAdded = 0
-    Name = 1
-    Tier = 2
-    IQ = 3
-    BonusIQ = 4
-    IR = 5
-    PackSize = 6
-    Rarity = 7
-    Mod1 = 8
-    Mod2 = 9
-    Mod3 = 10
-    Mod4 = 11
-    Mod5 = 12
-    Mod6 = 13
-    Mod7 = 14
-    Mod8 = 15
-    Mod9 = 16
-    Mod10 = 17
-    Mod11 = 18
-    Mod12 = 19
-    ZanaMod = 20
-    League = 21
-    Fragments = 21
-    CartoFound = 22
-    ZanaFound = 23
-    Notes = 24
+    DroppedInID = 1
+    ClearTime = 1
+    Name = 2
+    Tier = 3
+    IQ = 4
+    BonusIQ = 5
+    IR = 6
+    PackSize = 7
+    Rarity = 8
+    Mod1 = 9
+    Mod2 = 10
+    Mod3 = 11
+    Mod4 = 12
+    Mod5 = 13
+    Mod6 = 14
+    Mod7 = 15
+    Mod8 = 16
+    Mod9 = 17
+    Mod10 = 18
+    Mod11 = 19
+    Mod12 = 20
+    Mod13 = 21
+    Mod14 = 22
+    Mod15 = 23
+    Mod16 = 24
+    Mod17 = 25
+    Mod18 = 26
+    Corrupted = 27
+    ZanaMod = 28
+    League = 29
+    Fragments = 30
+    CartoFound = 31
+    ZanaFound = 32
+    Notes = 33
 
 class Maps():
     Dropped = 0
@@ -420,9 +429,10 @@ class MapWatchWindow(QtWidgets.QMainWindow):
     def runMap(self):
         print('Running Selected Map')
         if self.mapDB.runMap(self.map_data):
+            self.ui_addmore.reset(True)
             self.updateUiMapRunning()
             self.mapDB.map_type_running = self.thread.map_type
-            self.ui_addmore.reset(True)
+            self.updateUiMapRunningBonuses()
 
     def setDBFile(self, new=False):
         if self.clearMap():
@@ -788,7 +798,10 @@ class AddMore(QtWidgets.QDialog):
         self.curLeague = 0
         self.leagues = []
         self.loadExternalData()
-        self.curFrags = 0
+        # self.curIQ = 0
+        # self.curIR = 0
+        # self.curPS = 0
+        self.curFrags = 1
         self.curZanaMod = 0
         self.curCartoFound = 0
         self.curZanaFound = 0
@@ -871,39 +884,42 @@ class AddMore(QtWidgets.QDialog):
             self.ui.add_fragments.setProperty('value', frags)
             if Map.Mod1 in self.parent.mapDB.map_running and self.parent.mapDB.map_running[Map.Mod1] == 'Unidentified':
                 self.ui.add_iq.setMinimum(30)
+                self.curIQ = 30
                 self.ui.add_iq.setProperty('value', 30)
                 self.ui.add_iq.setEnabled(True)
-                self.ui.add_iq.setProperty('value', 0)
+                self.ui.add_ir.setProperty('value', 0)
                 self.ui.add_ir.setEnabled(True)
-                self.ui.add_iq.setProperty('value', 0)
+                self.ui.add_pack_size.setProperty('value', 0)
                 self.ui.add_pack_size.setEnabled(True)
             else:
                 if Map.IQ in self.parent.mapDB.map_running:
                     iq = self.parent.mapDB.map_running[Map.IQ]
-                self.ui.add_iq.setProperty('value', iq) #TODO: this is not showing the current IQ
+                self.ui.add_iq.setMinimum(0)
+                self.ui.add_iq.setProperty('value', iq)
                 self.ui.add_iq.setEnabled(False)
                 if Map.IR in self.parent.mapDB.map_running:
                     ir = self.parent.mapDB.map_running[Map.IR]
-                self.ui.add_iq.setProperty('value', ir)
+                self.ui.add_ir.setProperty('value', ir)
                 self.ui.add_ir.setEnabled(False)
                 if Map.PackSize in self.parent.mapDB.map_running:
                     ps = self.parent.mapDB.map_running[Map.PackSize]
-                self.ui.add_iq.setProperty('value', ps)
+                self.ui.add_pack_size.setProperty('value', ps)
                 self.ui.add_pack_size.setEnabled(False)
             if self.parent.mapDB.map_type_running == MapType.Fragment or self.parent.mapDB.map_type_running == MapType.RareFragment:
                 self.ui.add_fragments.setEnabled(False)
             else:
                 self.ui.add_fragments.setEnabled(True)
+            self.accept()
         else:
             if Map.IQ in self.parent.mapDB.map_running:
                 iq = self.parent.mapDB.map_running[Map.IQ]
             self.ui.add_iq.setProperty('value', iq)
             if Map.IR in self.parent.mapDB.map_running:
                 ir = self.parent.mapDB.map_running[Map.IR]
-            self.ui.add_iq.setProperty('value', ir)
+            self.ui.add_ir.setProperty('value', ir)
             if Map.PackSize in self.parent.mapDB.map_running:
                 ps = self.parent.mapDB.map_running[Map.PackSize]
-            self.ui.add_iq.setProperty('value', ps)
+            self.ui.add_pack_size.setProperty('value', ps)
             if Map.Fragments in self.parent.mapDB.map_running:
                 frags = self.parent.mapDB.map_running[Map.Fragments]
             self.ui.add_fragments.setProperty('value', frags)
@@ -912,13 +928,6 @@ class AddMore(QtWidgets.QDialog):
             self.ui.carto_box.setChecked(self.curCartoFound)
             self.ui.zana_box.setChecked(self.curZanaFound)
             self.ui.map_notes.setPlainText(self.curNotes)
-
-    def restoreDefaults(self):
-        self.parent.ui_confirm.boxType('confirm')
-        if self.parent.ui_confirm.exec_('Restore Defaults?', 'Are you sure you want to restore the default settings?'):
-            get_defaults = True
-            self.parent.settings = readSettings(get_defaults)
-            self.insertPrefs()
 
     def accept(self):
         if self.parent.mapDB.map_running:
@@ -1082,6 +1091,7 @@ class MapWatcher(QThread):
                     while copied_data[-1:] == '\n':
                         print('Trimming \\n')
                         copied_data = copied_data[:-1]
+                    print(copied_data)
                     self.parseMapData(copied_data)
                 elif re.search(self.fragment_check_str, copied_data) and not re.search(r'Map Watch Time Stamp:', copied_data):
                     print('====Found a Fragment====')
@@ -1101,9 +1111,11 @@ class MapDatabase(object):
         self.table_names = ['Maps_Dropped','Maps_Ran']
         self.unique_col_name = 'Time_Stamp_ID'
         self.column_names = [['Dropped_In_ID','Name','Tier','IQ','IR','Pack_Size','Rarity',
-                                'Mod1','Mod2','Mod3','Mod4','Mod5','Mod6','Mod7','Mod8','Mod9','Mod10','Mod11','Mod12'],
+                                'Mod1','Mod2','Mod3','Mod4','Mod5','Mod6','Mod7','Mod8','Mod9','Mod10',
+                                'Mod11','Mod12','Mod13','Mod14','Mod15','Mod16','Mod17','Mod18','Corrupted'],
                             ['Time_Cleared','Name','Tier','IQ','Bonus_IQ','IR','Pack_Size','Rarity',
-                                'Mod1','Mod2','Mod3','Mod4','Mod5','Mod6','Mod7','Mod8','Mod9','Mod10','Mod11','Mod12',
+                                'Mod1','Mod2','Mod3','Mod4','Mod5','Mod6','Mod7','Mod8','Mod9','Mod10',
+                                'Mod11','Mod12','Mod13','Mod14','Mod15','Mod16','Mod17','Mod18','Corrupted',
                                 'Zana_Mod','League','Fragments','Carto_Found','Zana_Found','Notes']]
         self.map_running = None
         self.map_type_running = MapType.Standard
@@ -1208,7 +1220,7 @@ class MapDatabase(object):
                 else:
                     self.c.execute("UPDATE {tn} SET {cn}=({val}) WHERE {kcn}=({key})".format(
                             tn=self.table_names[Maps.Ran],
-                            cn=self.column_names[Maps.Ran][int(field)],
+                            cn=self.column_names[Maps.Ran][int(field)-1],
                             kcn=self.unique_col_name,
                             val='\"'+value+'\"',
                             key=map[Map.TimeAdded]
@@ -1227,7 +1239,8 @@ class MapDatabase(object):
             print('updateMapRunning')
             self.openDB()
             try:
-                if self.map_running[Map.Mod1] == 'Unidentified':
+                print('here1')
+                if Map.Mod1 in self.map_running and self.map_running[Map.Mod1] == 'Unidentified':
                     update_cols = {
                         'IQ': Map.IQ,
                         'IR': Map.IR,
@@ -1241,6 +1254,7 @@ class MapDatabase(object):
                         'Notes': Map.Notes
                     }.items()
                 else:
+                    print('here2')
                     update_cols = {
                         'Bonus_IQ': Map.BonusIQ,
                         'League': Map.League,
@@ -1250,6 +1264,7 @@ class MapDatabase(object):
                         'Zana_Found': Map.ZanaFound,
                         'Notes': Map.Notes
                     }.items()
+
                 for col, i in update_cols:
                     self.c.execute("UPDATE {tn} SET {cn}=({val}) WHERE {kcn}=({key})".format(
                             tn=self.table_names[Maps.Ran],
@@ -1258,6 +1273,7 @@ class MapDatabase(object):
                             val='\"'+str(self.map_running[i])+'\"',
                             key=self.map_running[Map.TimeAdded]
                         ))
+                    print(col)
                 self.conn.commit()
             except:
                 self.parent.error('Error: Database record could not be updated.', sys.exc_info())
@@ -1322,6 +1338,7 @@ class MapDatabase(object):
             print('Map Deleted')
         except:
             self.parent.error('Error: Database record could not be deleted.', sys.exc_info())
+            map_name = 'Error'
         self.closeDB()
         return map_name
 
@@ -1357,7 +1374,7 @@ class MapDatabase(object):
             # Create columns if they don't already exist
             for col in self.column_names[i]:
                 if col not in existing_columns:
-                    if col in ['Tier','IQ','Bonus_IQ','IR','Pack_Size','Fragments','Carto_Found','Zana_Found']:
+                    if col in ['Tier','IQ','Bonus_IQ','IR','Pack_Size','Corrupted','Fragments','Carto_Found','Zana_Found']:
                         col_type = 'INTEGER'
                     elif col in ['Dropped_In_ID','Time_Cleared']:
                         col_type = 'REAL'
