@@ -73,8 +73,9 @@ class Maps():
 
 class MapType():
     Standard = 0
-    Fragment = 1
-    RareFragment = 2
+    Corrupted = 1
+    Fragment = 2
+    RareFragment = 3
 
 class ZanaMod():
     Name = 0
@@ -337,8 +338,11 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         if Map.Mod11 in self.map_data:
             all_mods = all_mods + '\r\n' + self.map_data[Map.Mod11]
             self.ui.ms_mods.setText(all_mods)
-        if Map.ZanaMod in self.map_data:
-            all_mods = all_mods + '\r\n' + self.map_data[Map.ZanaMod]
+        # if Map.ZanaMod in self.map_data:
+        #     all_mods = all_mods + '\r\n' + self.map_data[Map.ZanaMod]
+        #     self.ui.ms_mods.setText(all_mods)
+        if Map.Corrupted in self.map_data and int(self.map_data[Map.Corrupted]):
+            all_mods = self.ui.ms_mods.toHtml() + '\r\n<br><span  style="color:#CC0000">Corrupted</span>'
             self.ui.ms_mods.setText(all_mods)
 
     def updateUiMapRunning(self, clear=False):
@@ -361,7 +365,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
             self.ui.mr_pack_size.setText(self.ui.ms_pack_size.text())
             self.ui.mr_rarity.setText(self.ui.ms_rarity.text())
             self.ui.mr_mods.setText(self.ui.ms_mods.toPlainText())
-            self.map_mod_text = self.ui.ms_mods.toHtml() # orginal copy for bonus IQ add/remove
+            self.map_mod_text = self.ui.ms_mods.toHtml() # orginal copy for adding/removing Zana Mod
             rarity = self.ui.ms_rarity.text()
             if rarity == 'Rare':
                 self.ui.mr_name.setStyleSheet("color: rgb(170, 170, 0);")
@@ -381,7 +385,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
             self.ui.mr_bonus_iq.setText('')
         if Map.ZanaMod in self.mapDB.map_running:
             if self.mapDB.map_running[Map.ZanaMod] and self.map_mod_text:
-                all_mods = self.map_mod_text + '\r\n<br><b>' +self.mapDB.map_running[Map.ZanaMod]+ '</b>'
+                all_mods = self.map_mod_text + '\r\n<br><b>' + self.mapDB.map_running[Map.ZanaMod] + '</b>'
                 self.ui.mr_mods.setText(all_mods)
             else:
                 self.ui.mr_mods.setText(self.map_mod_text)
@@ -431,7 +435,7 @@ class MapWatchWindow(QtWidgets.QMainWindow):
         if self.mapDB.runMap(self.map_data):
             self.ui_addmore.reset(True)
             self.updateUiMapRunning()
-            self.mapDB.map_type_running = self.thread.map_type
+            #self.mapDB.map_type_running = self.thread.map_type
             self.updateUiMapRunningBonuses()
 
     def setDBFile(self, new=False):
@@ -965,6 +969,7 @@ class MapWatcher(QThread):
         self.map_type = MapType.Standard
         self.map_check_str = r'\r?\n--------\r?\nTravel to this Map by using it in the Eternal Laboratory or a personal Map Device\. Maps can only be used once\.'
         self.fragment_check_str = r'\r?\n--------\r?\nCan be used in the Eternal Laboratory or a personal Map Device\.'
+        self.corrupted_map_check_str = r'\r?\n--------\r?\nCorrupted'
         # I don't know how to include some of these within the current map tier system, 0,-1,-2 ?
         # How would they compare in statistics? Not sure about this anymore.
         # self.fragments = [
@@ -1011,8 +1016,9 @@ class MapWatcher(QThread):
     def setMapCheckInterval(self, seconds):
         self.check_interval = seconds
 
-    def parseMapData(self, copied_str, fragment=False):
+    def parseMapData(self, copied_str, fragment=False, corrupted=False):
         map_data = {}
+        map_data[Map.Corrupted] = "0"
         map_rarity = re.search(r'Rarity:\s(\w*)\n', copied_str)
         map_name1 = re.search(r'Rarity:\s\w*\n(.*)\n', copied_str)
         if fragment:
@@ -1026,7 +1032,11 @@ class MapWatcher(QThread):
                 self.map_type = MapType.Fragment
             map_data[Map.TimeAdded] = time.time()
         else:
-            self.map_type = MapType.Standard
+            if corrupted:
+                self.map_type = MapType.Corrupted
+                map_data[Map.Corrupted] = "1"
+            else:
+                self.map_type = MapType.Standard
             map_name2 = re.search(r'Rarity:\s\w*\n.*\n([^-].*)\n', copied_str)
             map_tier = re.search(r'Map\sTier:\s(\d*)\s', copied_str)
             map_iq = re.search(r'Item\sQuantity:\s\+(\d*)\%.*\n', copied_str)
@@ -1080,6 +1090,9 @@ class MapWatcher(QThread):
                     pyperclip.copy(time_stamp + copied_data)
                     # Remove all Windows specific carriage returns (\r)
                     copied_data = copied_data.replace('\r', '')
+                    # Check for a corrupted map
+                    corrupted_map = re.search(self.corrupted_map_check_str, copied_data)
+                    #print(corrupted_map)
                     # Remove quote on a unique map (if there) and all other unneeded data below
                     pattern = re.compile(r'.*--------.*--------.*--------.*(\n--------.*--------.*)', re.DOTALL)
                     extra_text = re.search(pattern, copied_data)
@@ -1092,7 +1105,7 @@ class MapWatcher(QThread):
                         print('Trimming \\n')
                         copied_data = copied_data[:-1]
                     print(copied_data)
-                    self.parseMapData(copied_data)
+                    self.parseMapData(copied_data, False, corrupted_map)
                 elif re.search(self.fragment_check_str, copied_data) and not re.search(r'Map Watch Time Stamp:', copied_data):
                     print('====Found a Fragment====')
                     # Add time stamp to every fragment found
@@ -1208,6 +1221,7 @@ class MapDatabase(object):
                 {"This map is already running. If you would like to clear it click the 'Map Clear' button."})
             return False
         self.parent.clearMap()
+        self.map_type_running = self.parent.thread.map_type
         self.openDB()
         try:
             for field, value in map.items():
@@ -1218,6 +1232,7 @@ class MapDatabase(object):
                             val=value
                         ))
                 else:
+                    print(value)
                     self.c.execute("UPDATE {tn} SET {cn}=({val}) WHERE {kcn}=({key})".format(
                             tn=self.table_names[Maps.Ran],
                             cn=self.column_names[Maps.Ran][int(field)-1],
